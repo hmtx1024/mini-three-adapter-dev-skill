@@ -146,7 +146,7 @@ main.ts
 
 | 层次 | 工具 | 覆盖 |
 | --- | --- | --- |
-| 静态规则 | `scripts/check_project.mjs` | 硬规则：求值顺序、插件配置、CJS 分包形态、环形依赖、wx.createCanvas、dispose 接线… |
+| 静态规则 | `<SKILL_DIR>/scripts/check_project.mjs` | 硬规则：求值顺序、插件配置、CJS 分包形态、环形依赖、wx.createCanvas、dispose 接线… |
 | 类型 | `tsc --noEmit` | 跨层契约、`SceneContext`、资源 id 字面量 |
 | 纯逻辑单测 | Vitest | `core/*`（DisposalGroup、EventBus、Loop、manifest 校验）；注入 mock runtime，不依赖 wx |
 | 构建 | `vite build` + `check_bundle.mjs` | three 是否在独立 chunk、包体预算、manifest 完整性 |
@@ -175,7 +175,7 @@ main.ts
   这不是「优化选项」而是求值顺序的前提：three 必须在 `createWeChatGameRuntime()` 之后才被 `require`，单文件打包做不到。
 - **进阶**：主包只放启动与首屏；把模型/纹理、decoder、worker 放进 `game.json` 的 `subpackages`，用 `wx.loadSubpackage()` / `wx.preDownloadSubpackage()` 按关卡加载。
   注意 `manualChunks` 的作用是把模块**分组**，分组只影响 chunk 边界，不会让 chunk 自动变成小程序分包；要真正把体积移出主包，得让 Vite 把产物输出到分包目录并在 `game.json` 声明。
-- **预算门禁**：`scripts/check_bundle.mjs` 输出各文件体积与占比；主包 > 3.2MB 就应预警（留 20% 余量），> 4MB 直接失败。
+- **预算门禁**：`<SKILL_DIR>/scripts/check_bundle.mjs` 输出各文件体积与占比；主包 > 3.2MB 就应预警（留 20% 余量），> 4MB 直接失败。
 - **顺序**：裁剪/压缩 → 动态 import 拆非首屏 → CDN 远程资源 → 最后才分包。分包带来网络异常与加载状态管理成本，不要一上来就分包。
 
 ## 2.12 AI 协作约定（让每次生成都一致）

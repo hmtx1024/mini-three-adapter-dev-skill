@@ -1,12 +1,36 @@
 # mini-three-adapter-dev
 
-面向 AI 编码助手的 **mini-three-adapter + Three.js 微信 3D 开发 Skill**。
+面向 AI 编码助手的 **mini-three-adapter + Three.js 微信 3D 开发 Skill**，按 `skills.sh` 的仓库结构组织。
 
 把「微信小游戏平台约束」「mini-three-adapter 适配层行为」「可维护的工程架构」固化成一套可执行规范，并附带可运行脚手架、参考文档和静态校验脚本。
 
 目标环境：`mini-three-adapter@0.1.7` + `three@0.187.0` + Vite 6 + TypeScript。
 
-> 给 AI 的入口是 [`SKILL.md`](./SKILL.md)；给维护者的入口是 [`AGENTS.md`](./AGENTS.md)；本文件面向第一次接触仓库的人。
+> 给 AI 的入口是 [`skills/mini-three-adapter-dev/SKILL.md`](./skills/mini-three-adapter-dev/SKILL.md)；给维护者的入口是 [`AGENTS.md`](./AGENTS.md)；本文件面向第一次接触仓库的人。
+
+---
+
+## 仓库结构
+
+```text
+mini-three-adapter-dev-skill/
+├── skills/
+│   └── mini-three-adapter-dev/
+│       ├── SKILL.md              # 必需：Skill 入口
+│       ├── references/           # 7 份按需加载的详细文档
+│       ├── assets/scaffold/      # 可运行工程模板
+│       └── scripts/              # 生成 / 校验脚本
+├── AGENTS.md                     # 维护规则与升级流程
+├── README.md
+└── .gitignore
+```
+
+发布到 `skills.sh` 需要：
+
+1. 仓库是 **Public** 的 GitHub 仓库；
+2. `skills/<skill-name>/SKILL.md` 存在。
+
+本仓库的 skill 名为 `mini-three-adapter-dev`，与 `SKILL.md` frontmatter 一致。
 
 ---
 
@@ -25,18 +49,17 @@
 
 ---
 
-## 仓库内容
+## 包含内容
 
 | 路径 | 说明 |
 | --- | --- |
-| [`SKILL.md`](./SKILL.md) | Skill 入口：frontmatter、14 条硬规则、工作流、反模式、参考索引 |
-| [`references/`](./references/) | 7 份按需加载的详细文档：适配层解剖、工程架构、平台约束、踩坑、工作流、检查清单、代码配方 |
-| [`assets/scaffold/`](./assets/scaffold/) | 可直接运行的 Vite + TS 工程模板 |
-| [`scripts/new_project.mjs`](./scripts/new_project.mjs) | 从脚手架生成新工程，替换项目名与 AppID |
-| [`scripts/check_project.mjs`](./scripts/check_project.mjs) | 静态校验硬规则：求值顺序、构建形态、分包、反模式、适配层版本 |
-| [`scripts/check_bundle.mjs`](./scripts/check_bundle.mjs) | 产物体检：chunk 形态、manifest、包体预算 |
+| [`skills/mini-three-adapter-dev/SKILL.md`](./skills/mini-three-adapter-dev/SKILL.md) | Skill 入口：frontmatter、14 条硬规则、工作流、反模式、参考索引 |
+| [`skills/mini-three-adapter-dev/references/`](./skills/mini-three-adapter-dev/references/) | 7 份按需加载的详细文档 |
+| [`skills/mini-three-adapter-dev/assets/scaffold/`](./skills/mini-three-adapter-dev/assets/scaffold/) | Vite + TS 工程模板（也是最小可运行示例） |
+| [`skills/mini-three-adapter-dev/scripts/new_project.mjs`](./skills/mini-three-adapter-dev/scripts/new_project.mjs) | 从脚手架生成新工程，替换项目名与 AppID |
+| [`skills/mini-three-adapter-dev/scripts/check_project.mjs`](./skills/mini-three-adapter-dev/scripts/check_project.mjs) | 静态校验硬规则：求值顺序、构建形态、分包、反模式、适配层版本 |
+| [`skills/mini-three-adapter-dev/scripts/check_bundle.mjs`](./skills/mini-three-adapter-dev/scripts/check_bundle.mjs) | 产物体检：chunk 形态、manifest、包体预算 |
 | [`AGENTS.md`](./AGENTS.md) | 维护本 Skill 的约束，以及「更新 Skill / 升级适配层」流程 |
-| `.tmp/` | 本地工作区（上游源码、验证工程、日志），已被 Git 忽略 |
 
 `references/` 按编号阅读：
 
@@ -54,15 +77,24 @@
 
 ## 安装与使用
 
-把本目录放到 Agent 客户端的 skills 目录中即可。以本机 OpenCode 为例，目录形如：
+### 通过 skills.sh / 公共仓库
+
+把本仓库公开发布后，`skills.sh` 会扫描到：
+
+```text
+skills/mini-three-adapter-dev/SKILL.md
+```
+
+### 本地 OpenCode
+
+把 Skill 子目录复制或链接到客户端的 skills 目录。本机示例：
 
 ```text
 ~/.agents/skills/mini-three-adapter-dev/
 ├── SKILL.md
 ├── references/
 ├── assets/
-├── scripts/
-└── AGENTS.md
+└── scripts/
 ```
 
 之后在会话里说「用 mini-three-adapter 新建一个微信小游戏项目」即可触发。
@@ -71,8 +103,10 @@
 
 ### 新建工程
 
+以下命令在**仓库根目录**执行。若已把 Skill 安装到其他位置，把 `skills/mini-three-adapter-dev` 换成实际的 Skill 目录。
+
 ```bash
-node scripts/new_project.mjs ./my-game --name "My 3D Game" --appid wx1234567890
+node skills/mini-three-adapter-dev/scripts/new_project.mjs ./my-game --name "My 3D Game" --appid wx1234567890
 cd my-game
 npm install
 npm run check
@@ -83,8 +117,8 @@ npm run check
 继续校验：
 
 ```bash
-node <Skill目录>/scripts/check_project.mjs .
-node <Skill目录>/scripts/check_bundle.mjs ./dist
+node ../skills/mini-three-adapter-dev/scripts/check_project.mjs .
+node ../skills/mini-three-adapter-dev/scripts/check_bundle.mjs ./dist
 npm run h5   # build + preview，在浏览器里跑同一份场景代码
 ```
 
@@ -133,7 +167,7 @@ typecheck -> vite build -> postbuild（拷贝 game.json / 校验 manifest / 包�
 静态检查脚手架本身（无需安装依赖）：
 
 ```bash
-node scripts/check_project.mjs assets/scaffold
+node skills/mini-three-adapter-dev/scripts/check_project.mjs skills/mini-three-adapter-dev/assets/scaffold
 # 0 error，1 条预期 WARN [URL_CHECK_OFF]
 ```
 

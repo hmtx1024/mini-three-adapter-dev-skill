@@ -1,10 +1,27 @@
 # AGENTS.md
 
-本仓库是 Agent Skill `mini-three-adapter-dev` 的**内容本身**，不是可运行的游戏工程：根目录没有 `package.json`、依赖或构建脚本。内容只有四类：`SKILL.md`、`references/`、`assets/scaffold/`、`scripts/`。
+本仓库是 **skills.sh 兼容的 Skill 仓库**，不是游戏工程，也不是可直接运行的 npm 项目。根目录只有说明文件与 `skills/`：
 
-如果任务只是「用这个 Skill 开发项目」，完整读 `SKILL.md`，不要改本仓库。目标适配层版本是 `mini-three-adapter@0.1.7`（`three@0.187.0`）。
+```text
+mini-three-adapter-dev-skill/
+├── skills/
+│   └── mini-three-adapter-dev/       # 真正的 Skill
+│       ├── SKILL.md                  # 必需入口
+│       ├── references/               # 按需加载的详细文档
+│       ├── assets/scaffold/          # 可运行工程模板
+│       └── scripts/                  # 三个校验/生成脚本
+├── AGENTS.md                         # 本文件：维护规则
+├── README.md                         # 仓库说明
+└── .gitignore
+```
 
-`.tmp/` 是工作区：下载的上游适配层源码（`.tmp/mini-three-adapter`）、验证工程、临时脚本都放这里，**不要**把 `.tmp/` 的内容当成 Skill 的一部分，也不要从 `.tmp/` 反向覆盖正式文件。
+发布到 skills.sh 的前提：仓库是 **Public GitHub 仓库**，扫描器会找 `skills/*/SKILL.md`。本目录名 `mini-three-adapter-dev` 必须与 `SKILL.md` frontmatter 的 `name` 一致。
+
+如果任务只是「用这个 Skill 开发项目」，读 `skills/mini-three-adapter-dev/SKILL.md`，不要改本仓库。
+
+目标适配层版本：`mini-three-adapter@0.1.7`（`three@0.187.0`）。
+
+`.tmp/` 是工作区：上游适配层源码（`.tmp/mini-three-adapter`）、验证工程、临时脚本和日志都放这里。**不要**把 `.tmp/` 当作 Skill 内容，也不要从 `.tmp/` 反向覆盖正式文件。
 
 用户说「更新 Skill」「按最新适配层更新」「同步适配层」时，直接执行下方《更新 Skill / 适配层升级流程》，不要只改版本号。
 
@@ -12,32 +29,32 @@
 
 | 路径 | 作用 | 注意 |
 | --- | --- | --- |
-| `SKILL.md` | Skill 入口：frontmatter + 14 条硬规则 + 参考索引 | description 是触发入口，保留 `createWeChatGameRuntime`、`__m3()` 等 API 关键词 |
-| `references/01–07` | 按需加载的详细文档 | 新增/改名必须同步 `SKILL.md` 文末索引 |
-| `assets/scaffold/` | 可运行工程模板，由 `new_project.mjs` **整目录复制** | 改模板只能改这里；生成后的工程不会反向同步 |
-| `scripts/` | 三个独立校验脚本，只依赖 Node 内置模块 | 不要引入 npm 依赖，也不要把它们复制进 scaffold |
+| `skills/mini-three-adapter-dev/SKILL.md` | Skill 入口：frontmatter + 14 条硬规则 + 参考索引 | description 是触发入口，保留 `createWeChatGameRuntime`、`__m3()` 等 API 关键词 |
+| `skills/mini-three-adapter-dev/references/01–07` | 按需加载的详细文档 | 新增/改名必须同步 `SKILL.md` 文末索引 |
+| `skills/mini-three-adapter-dev/assets/scaffold/` | 可运行工程模板，由 `new_project.mjs` **整目录复制** | 改模板只能改这里；生成后的工程不会反向同步 |
+| `skills/mini-three-adapter-dev/scripts/` | 三个独立校验/生成脚本，只依赖 Node 内置模块 | 不要引入 npm 依赖，也不要把它们复制进 scaffold |
 
-`assets/scaffold/scripts/`（`postbuild.mjs`、`smoke.cjs`）是生成工程自带的脚本，与根目录 `scripts/` 用途不同，不要混淆。
+`assets/scaffold/scripts/`（`postbuild.mjs`、`smoke.cjs`）是生成工程自带的脚本，与 Skill 根目录的 `scripts/` 用途不同，不要混淆。
 
 ## 验证
 
 静态检查模板（无需 `npm install`）：
 
 ```bash
-node scripts/check_project.mjs assets/scaffold
+node skills/mini-three-adapter-dev/scripts/check_project.mjs skills/mini-three-adapter-dev/assets/scaffold
 # 基线：0 error，1 条预期 WARN [URL_CHECK_OFF]
 ```
 
 改动 scaffold 后，生成临时工程跑完整链路：
 
 ```bash
-node scripts/new_project.mjs .tmp/verify-game --name verify --force
+node skills/mini-three-adapter-dev/scripts/new_project.mjs .tmp/verify-game --name verify --force
 cd .tmp/verify-game
 npm install
 npm run check          # typecheck -> build(+postbuild) -> smoke，需先有 dist
 npm run h5:build       # H5 链路不在 check 里，改了 bootstrap.h5.ts 必须单独跑
-node <仓库>/scripts/check_project.mjs .
-node <仓库>/scripts/check_bundle.mjs ./dist
+node <仓库>/skills/mini-three-adapter-dev/scripts/check_project.mjs .
+node <仓库>/skills/mini-three-adapter-dev/scripts/check_bundle.mjs ./dist
 ```
 
 预期：`game.js` 约 1.3 KB、4 个 chunk、`dist` 约 0.58 MB；check 脚本 0 error，`check_bundle` PASS。`smoke` 在 Node 里伪造 wx 宿主，固定等待 2.5 秒，退出前删除 `.smoke/`。
@@ -47,7 +64,7 @@ node <仓库>/scripts/check_bundle.mjs ./dist
 
 ## 更新 Skill / 适配层升级流程（收到「更新 Skill」「按最新适配层更新」时执行）
 
-目标：把最新 `mini-three-adapter` 的行为差异同步进本 Skill，并用可执行验证证明脚手架仍可构建。临时文件一律放 `.tmp/`；先用 `.tmp` 取到最新版并列出变更，再改正式文件，改完必须用**全新生成**的工程验证。
+目标：把最新 `mini-three-adapter` 的行为差异同步进 `skills/mini-three-adapter-dev/`，并用可执行验证证明脚手架仍可构建。临时文件一律放 `.tmp/`；先用 `.tmp` 取到最新版并列出变更，再改正式文件，改完必须用**全新生成**的工程验证。
 
 1. **确认最新版并落到 `.tmp`**
 
@@ -67,12 +84,12 @@ node <仓库>/scripts/check_bundle.mjs ./dist
 
    | 上游变化 | 同步位置 |
    | --- | --- |
-   | 公开 API / 类型 / 导出 | `references/01-adapter-anatomy.md`、`07-code-recipes.md`、`scripts/check_project.mjs` |
-   | 运行时行为（探测 / 事件 / 图片 / 生命周期） | `SKILL.md` 硬规则、`references/01/04/05`、`assets/scaffold/src/platform/` |
-   | 构建插件 / 选项 / AST 改写 | `SKILL.md` 硬规则 2–3、`references/01/04/07`、`assets/scaffold/vite.config.ts`、`check_project.mjs` |
-   | 平台事实 / 兼容矩阵 | `references/03-platform-constraints.md`、`06-checklists.md` |
-   | 示例 / 配方 / 排错 | `references/07-code-recipes.md`、`04-pitfalls.md` |
-   | 版本号 / 验证数字 | `SKILL.md`（frontmatter + 验证记录）、`AGENTS.md`、`assets/scaffold/package.json`、`references/` 中的版本引用 |
+   | 公开 API / 类型 / 导出 | `skills/mini-three-adapter-dev/references/01-adapter-anatomy.md`、`07-code-recipes.md`、`scripts/check_project.mjs` |
+   | 运行时行为（探测 / 事件 / 图片 / 生命周期） | `skills/mini-three-adapter-dev/SKILL.md` 硬规则、`references/01/04/05`、`assets/scaffold/src/platform/` |
+   | 构建插件 / 选项 / AST 改写 | `skills/mini-three-adapter-dev/SKILL.md` 硬规则 2–3、`references/01/04/07`、`assets/scaffold/vite.config.ts`、`scripts/check_project.mjs` |
+   | 平台事实 / 兼容矩阵 | `skills/mini-three-adapter-dev/references/03-platform-constraints.md`、`06-checklists.md` |
+   | 示例 / 配方 / 排错 | `skills/mini-three-adapter-dev/references/07-code-recipes.md`、`04-pitfalls.md` |
+   | 版本号 / 验证数字 | `skills/mini-three-adapter-dev/SKILL.md`（frontmatter + 验证记录）、`AGENTS.md`、`assets/scaffold/package.json`、`references/` 中的版本引用 |
 
 4. **更新五个面（新增检查时再做反向验证）**：
    - `SKILL.md`：`version` 递增（如 1.2.0 → 1.3.0）、description 触发词、目标版本、硬规则、反模式、工具说明、验证记录、完成定义。
@@ -85,18 +102,18 @@ node <仓库>/scripts/check_bundle.mjs ./dist
 5. **全新验证，不复用旧工程**：
 
    ```bash
-   node scripts/new_project.mjs .tmp/verify-<version> --name verify --force
+   node skills/mini-three-adapter-dev/scripts/new_project.mjs .tmp/verify-<version> --name verify --force
    cd .tmp/verify-<version>
    npm install
    npm run check          # typecheck -> build(+postbuild) -> smoke
    npm run h5:build       # H5 链路不在 check 里
-   node <仓库>/scripts/check_project.mjs .
-   node <仓库>/scripts/check_bundle.mjs ./dist
+   node <仓库>/skills/mini-three-adapter-dev/scripts/check_project.mjs .
+   node <仓库>/skills/mini-three-adapter-dev/scripts/check_bundle.mjs ./dist
    ```
 
-   同时跑 `node scripts/check_project.mjs assets/scaffold`。基线应为 **0 error + 1 条预期 `URL_CHECK_OFF` WARN**。验证工程放在本仓库 `.tmp/` 下还有一个作用：路径含 `mini-three-adapter`，能暴露 `manualChunks` 过宽匹配之类的路径相关 bug。
+   同时跑 `node skills/mini-three-adapter-dev/scripts/check_project.mjs skills/mini-three-adapter-dev/assets/scaffold`。基线应为 **0 error + 1 条预期 `URL_CHECK_OFF` WARN**。验证工程放在本仓库 `.tmp/` 下还有一个作用：路径含 `mini-three-adapter`，能暴露 `manualChunks` 过宽匹配之类的路径相关 bug。
 
-6. **回写验证数字**：把实际 Node / Vite / three / adapter 版本、chunk 数量、`game.js` 与 `dist` 体积、构建报告计数、smoke 结论写回 `SKILL.md` 的「脚手架验证记录」和 `AGENTS.md` 的预期值；再全仓搜索旧目标版本号，确认当前描述没有残留（`05-workflows.md` 的历史升级表应保留）。
+6. **回写验证数字**：把实际 Node / Vite / three / adapter 版本、chunk 数量、`game.js` 与 `dist` 体积、构建报告计数、smoke 结论写回 `skills/mini-three-adapter-dev/SKILL.md` 的「脚手架验证记录」和 `AGENTS.md` 的预期值；再全仓搜索旧目标版本号，确认当前描述没有残留（`05-workflows.md` 的历史升级表应保留）。
 
 7. **清理**：删除中间验证工程、日志和临时产物，保留 `.tmp/mini-three-adapter` 与最终 `verify-<version>`；确认仓库根没有 `.tmp` 之外的临时文件、`dist`、`.smoke`。
 
@@ -104,7 +121,9 @@ node <仓库>/scripts/check_bundle.mjs ./dist
 
 ## 改一处必须同步的地方
 
-- 一条硬规则通常同时出现在：`SKILL.md` 硬规则、`references/04-pitfalls.md`、`references/06-checklists.md`、`references/07-code-recipes.md`、`assets/scaffold/`、`scripts/check_project.mjs`。只改文案不同步 checker，规则就不可执行；只改 checker 不同步文档，用户看不到。
+> 下文中未写全路径的 `SKILL.md` / `references/` / `assets/scaffold/` / `scripts/` 均指 `skills/mini-three-adapter-dev/` 下的对应路径。
+
+- 一条硬规则通常同时出现在：`skills/mini-three-adapter-dev/SKILL.md` 硬规则、`references/04-pitfalls.md`、`references/06-checklists.md`、`references/07-code-recipes.md`、`assets/scaffold/`、`scripts/check_project.mjs`。只改文案不同步 checker，规则就不可执行；只改 checker 不同步文档，用户看不到。
 - `check_project.mjs` 是**基于文本正则**的检查，且先剥离注释。重构 `vite.config.ts` 的写法后，确认对应正则仍能命中；注释里出现反例不会误报。
 - 以下配置是承重墙，不要“简化”：CJS 输出 + `chunkFileNames` + `manualChunks`、禁止 `inlineDynamicImports`、`target: 'es2019'`、`modulePreload: false`、`preserveEntrySignatures: false`、`miniThree()` 扁平选项（上游 README 的 `assets: {}` 是无效写法）。`manualChunks` 的 adapter 规则必须写成 `id.includes('/node_modules/mini-three-adapter/')`；写成不带 `node_modules` 的包名会匹配项目目录，导致单文件产物（`check_project.mjs` 有 `BROAD_ADAPTER_CHUNK`）。
 - 依赖精确锁定：`three@0.187.0`、`mini-three-adapter@0.1.7`。升级时同步 `assets/scaffold/package.json`、`SKILL.md` 的「脚手架验证记录」、以及 references 中引用的版本/体积数字。

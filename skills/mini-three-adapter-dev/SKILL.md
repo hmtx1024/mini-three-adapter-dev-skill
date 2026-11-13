@@ -11,6 +11,8 @@ version: "1.2.0"
 
 把「微信小游戏平台硬约束」+「mini-three-adapter 适配层实现」+「可维护工程架构」固化成 AI 可直接执行的开发规范。附带：7 份参考文档（`references/`）、可复制的完整工程脚手架（`assets/scaffold/`）、3 个校验脚本（`scripts/`）。
 
+> 本文中的 `<SKILL_DIR>` 指本 `SKILL.md` 所在目录（即包含 `references/`、`assets/scaffold/`、`scripts/` 的目录）。命令可在任意工作目录执行，传入绝对路径即可。
+
 **目标适配层版本**：`mini-three-adapter@0.1.7`（2026-11-13）。0.1.2–0.1.7 修复了图片事件桥接、能力探测回退、`new`/对象简写改写、H5 原生事件被吞等 P0/P1 缺陷；旧版本可运行，但本 Skill 的行为描述以 0.1.7 为准，`check_project.mjs` 会对 <0.1.7 给出升级告警。
 **适用**：基于 `mini-three-adapter` 的微信小游戏（主）、微信 `<canvas type="webgl2">` 小程序、H5 双端；Vite / Rollup + TypeScript + `three >= 0.163`（脚手架锁定 `0.187.0`）。
 **不适用**：未使用 `mini-three-adapter` 的项目、Cocos / Laya / Unity 导出项目、纯 WebView 套壳、依赖完整 DOM/CSS 的 UI 框架、`three/webgpu` + TSL/NodeMaterial 项目。
@@ -50,7 +52,7 @@ version: "1.2.0"
 ### A. 新建项目
 
 ```bash
-node scripts/new_project.mjs <目标目录> --name my-game --appid <wx-appid>
+node <SKILL_DIR>/scripts/new_project.mjs <目标目录> --name my-game --appid <wx-appid>
 cd <目标目录> && npm install && npm run check
 # 用微信开发者工具（小游戏模式）打开该目录，miniprogramRoot = dist/
 node <SKILL_DIR>/scripts/check_project.mjs <目标目录>
@@ -113,9 +115,9 @@ npm run h5   # build + preview，验证同一份场景代码在浏览器里出�
 
 | 脚本 | 用途 |
 | --- | --- |
-| `scripts/new_project.mjs <dir>` | 从 `assets/scaffold/` 生成新工程，替换项目名/AppID |
-| `scripts/check_project.mjs <dir>` | 静态校验硬规则（含适配层版本、构建形态、产物 chunk 形态、环形依赖），输出可执行的修复建议 |
-| `scripts/check_bundle.mjs <dist>` | 统计产物体积，校验「three 在独立 chunk」，对照 4MB 主包预算并给出分包建议 |
+| `<SKILL_DIR>/scripts/new_project.mjs <dir>` | 从 `assets/scaffold/` 生成新工程，替换项目名/AppID |
+| `<SKILL_DIR>/scripts/check_project.mjs <dir>` | 静态校验硬规则（含适配层版本、构建形态、产物 chunk 形态、环形依赖），输出可执行的修复建议 |
+| `<SKILL_DIR>/scripts/check_bundle.mjs <dist>` | 统计产物体积，校验「three 在独立 chunk」，对照 4MB 主包预算并给出分包建议 |
 
 `check_project.mjs` 与 `check_bundle.mjs` 支持 `--json`，便于 CI 与 AI 直接消费结果；`new_project.mjs` 只接受 `--name` / `--appid` / `--force`。
 
@@ -134,7 +136,7 @@ npm run h5   # build + preview，验证同一份场景代码在浏览器里出�
 ## 完成定义（每次改动后）
 
 - [ ] 依赖精确锁定 `mini-three-adapter@0.1.7` / `three@0.187.0`
-- [ ] `node scripts/check_project.mjs <项目目录>` 无 ERROR（`ADAPTER_OUTDATED` 为空）
+- [ ] `node <SKILL_DIR>/scripts/check_project.mjs <项目目录>` 无 ERROR（`ADAPTER_OUTDATED` 为空）
 - [ ] `npm run typecheck` 与 `npm run build` 通过，产物是 `game.js` + `chunks/*.js`（three 在独立 chunk，入口 < 400 KB）
 - [ ] `npm run smoke` 通过：无 `Scoped global ... was read before a runtime was created`，场景 chunk 确实延迟加载
 - [ ] `npm run h5:build` 通过；H5 冒烟里 `pointer*` / `wheel` 直接驱动 OrbitControls（0.1.7 原生事件）

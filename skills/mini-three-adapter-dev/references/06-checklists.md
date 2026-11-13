@@ -32,7 +32,7 @@
 
 ## B. 构建期
 
-- [ ] `node scripts/check_project.mjs <project>` 无 ERROR（`ADAPTER_OUTDATED` 应为空）
+- [ ] `node <SKILL_DIR>/scripts/check_project.mjs <project>` 无 ERROR（`ADAPTER_OUTDATED` 应为空）
 - [ ] `npm run typecheck` 通过（Vite 6 + 0.1.7 不应出现 `TS2769`）
 - [ ] `npm run build` 通过，产物为 `dist/game.js` + `dist/chunks/*.js`（three 在独立 chunk，入口 < 400 KB）
 - [ ] `npm run h5:build` 通过（H5 不在 `npm run check` 里；改了 `bootstrap.h5.ts` 必须单独跑）
@@ -44,7 +44,7 @@
 - [ ] `dist/mini-three-assets.json` 存在，`entries` / `decoderPaths` 符合预期
 - [ ] `gameJsonSuggestion` 已合并进 `game.json`（插件不会自动改）
 - [ ] `dist/game.json`、`dist/project.config.json` 已就位（`postbuild.mjs`）
-- [ ] `node scripts/check_bundle.mjs ./dist`：主包 < 3.2MB（预警线），总量 < 30MB
+- [ ] `node <SKILL_DIR>/scripts/check_bundle.mjs ./dist`：主包 < 3.2MB（预警线），总量 < 30MB
 - [ ] 生产构建关闭 sourcemap、屏蔽 `console.log`、开启合适压缩
 - [ ] `packOptions.ignore` 排除源码 / 设计稿 / 文档 / `.map`
 
