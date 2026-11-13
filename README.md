@@ -1,6 +1,6 @@
 # mini-three-adapter-dev
 
-面向 AI 编码助手的 **mini-three-adapter + Three.js 微信 3D 开发 Skill**，按 `skills.sh` 的仓库结构组织。
+面向 AI 编码助手的 **mini-three-adapter + Three.js 微信 3D 开发 Skill**。
 
 把「微信小游戏平台约束」「mini-three-adapter 适配层行为」「可维护的工程架构」固化成一套可执行规范，并附带可运行脚手架、参考文档和静态校验脚本。
 
@@ -25,12 +25,7 @@ mini-three-adapter-dev-skill/
 └── .gitignore
 ```
 
-发布到 `skills.sh` 需要：
-
-1. 仓库是 **Public** 的 GitHub 仓库；
-2. `skills/<skill-name>/SKILL.md` 存在。
-
-本仓库的 skill 名为 `mini-three-adapter-dev`，与 `SKILL.md` frontmatter 一致。
+Skill 名为 `mini-three-adapter-dev`，与 `SKILL.md` frontmatter 一致。
 
 ---
 
@@ -76,14 +71,6 @@ mini-three-adapter-dev-skill/
 ---
 
 ## 安装与使用
-
-### 通过 skills.sh / 公共仓库
-
-把本仓库公开发布后，`skills.sh` 会扫描到：
-
-```text
-skills/mini-three-adapter-dev/SKILL.md
-```
 
 ### 本地 OpenCode
 
