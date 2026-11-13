@@ -1,0 +1,13 @@
+# 验证/临时工作区（上游源码、生成工程、日志）
+.tmp/
+
+# 生成工程产物（脚手架模板本身不应包含这些）
+node_modules/
+dist/
+dist-h5/
+.smoke/
+
+*.log
+*.tgz
+.DS_Store
+Thumbs.db

@@ -1,0 +1,24 @@
+{
+  "name": "mini-three-game",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite build --watch",
+    "build": "vite build && node scripts/postbuild.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "h5": "npm run h5:build && vite preview --config vite.h5.config.ts --port 4173",
+    "h5:build": "vite build --config vite.h5.config.ts",
+    "smoke": "node scripts/smoke.cjs",
+    "check": "npm run typecheck && npm run build && npm run smoke"
+  },
+  "dependencies": {
+    "mini-three-adapter": "0.1.7",
+    "three": "0.187.0"
+  },
+  "devDependencies": {
+    "@types/three": "0.187.0",
+    "typescript": "^5.7.0",
+    "vite": "^6.0.0"
+  }
+}

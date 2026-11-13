@@ -1,0 +1,31 @@
+{
+  "appid": "touristappid",
+  "projectname": "mini-three-game",
+  "compileType": "game",
+  "libVersion": "3.0.0",
+  "setting": {
+    "es6": true,
+    "enhance": true,
+    "minified": false,
+    "postcss": false,
+    "urlCheck": false,
+    "coverView": false,
+    "packNpmManually": false,
+    "packNpmRelationList": [],
+    "babelSetting": {
+      "ignore": [],
+      "disablePlugins": [],
+      "outputPath": ""
+    }
+  },
+  "miniprogramRoot": "dist/",
+  "srcMiniprogramRoot": "dist/",
+  "packOptions": {
+    "ignore": [
+      { "type": "folder", "value": "src" },
+      { "type": "folder", "value": "docs" },
+      { "type": "folder", "value": ".git" }
+    ],
+    "include": []
+  }
+}

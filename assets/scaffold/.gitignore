@@ -1,0 +1,9 @@
+node_modules/
+dist/
+dist-h5/
+.smoke/
+.tmp/
+*.tgz
+.DS_Store
+*.log
+project.private.config.json
