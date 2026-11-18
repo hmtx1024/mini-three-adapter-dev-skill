@@ -72,6 +72,14 @@ Skill 名为 `mini-three-adapter-dev`，与 `SKILL.md` frontmatter 一致。
 
 ## 安装与使用
 
+### 一行命令安装（推荐）
+
+```bash
+npx skills add https://github.com/hmtx1024/mini-three-adapter-dev-skill --skill mini-three-adapter-dev
+```
+
+这是 skills.sh 提供的 CLI：从 GitHub 仓库扫描 `skills/*/SKILL.md`，把 `mini-three-adapter-dev` 直接装进本机客户端的 skills 目录，无需手动复制。安装后的触发方式见下文「本地 OpenCode」一节的说明（仅显式点名）。
+
 ### 本地 OpenCode
 
 把 Skill 子目录复制或链接到客户端的 skills 目录。本机示例：
@@ -84,7 +92,7 @@ Skill 名为 `mini-three-adapter-dev`，与 `SKILL.md` frontmatter 一致。
 └── scripts/
 ```
 
-之后在会话里说「用 mini-three-adapter 新建一个微信小游戏项目」即可触发。
+本 Skill 是**仅显式触发**的：话题相关不会自动加载它。在会话里点名它即可，例如输入 `@mini-three-adapter-dev`，或直接说「用 mini-three-adapter-dev 这个 skill 新建一个微信小游戏项目」。frontmatter 里的 `disable-model-invocation: true` / `metadata.opencode/autoinvoke: false` 负责对模型隐藏；description 末尾的「仅显式点名时加载」约束兼容只读 description 的其他客户端。
 
 也可以不安装，直接在本仓库会话中让 Agent 先读 `SKILL.md`。
 

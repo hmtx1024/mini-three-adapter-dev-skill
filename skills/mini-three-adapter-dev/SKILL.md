@@ -1,8 +1,11 @@
 ---
 name: mini-three-adapter-dev
-description: 辅助 AI 使用 mini-three-adapter（github.com/hmtx1024/mini-three-adapter，作用域化 shim + 构建期 AST 重写的 Three.js 适配层，目标版本 0.1.7）搭配 Three.js 开发微信小游戏 / 小程序 / H5 三端 3D 项目。适用于新建工程脚手架、接入 createWeChatGameRuntime、动态 import 求值顺序、miniThree() 构建插件配置、RuntimeOptions 与 rendererHints、webgl2Source 能力判定、触摸与 resize 接线、图片纹理事件桥接、DRACO/KTX2 decoder 与分包、game.json 配置、性能与包体优化、真机排错。当用户提到 mini-three-adapter、createWeChatGameRuntime、MiniThreeRuntime、rendererHints、webgl2Source、__m3()、mini-three-assets.json、getActiveScope、getEarlyScopeReads、小游戏黑屏/白屏/触摸失效/纹理加载不出/包体超限时触发。
+description: 辅助 AI 使用 mini-three-adapter（作用域化 shim + 构建期 AST 改写的 Three.js 适配层，目标版本 0.1.7）搭配 Three.js 开发微信小游戏 / 小程序 / H5 三端 3D 项目：工程脚手架、构建与分包配置、平台硬约束、排错手册、校验脚本。本 Skill 仅在用户显式点名时加载（如 @mini-three-adapter-dev 或「用 mini-three-adapter-dev」），不要根据话题关键词自动触发。
 agent_created: true
-version: "1.2.0"
+version: "1.3.0"
+disable-model-invocation: true
+metadata:
+  opencode/autoinvoke: false
 ---
 
 # mini-three-adapter + Three.js 微信小游戏辅助开发

@@ -29,7 +29,7 @@ mini-three-adapter-dev-skill/
 
 | 路径 | 作用 | 注意 |
 | --- | --- | --- |
-| `skills/mini-three-adapter-dev/SKILL.md` | Skill 入口：frontmatter + 14 条硬规则 + 参考索引 | description 是触发入口，保留 `createWeChatGameRuntime`、`__m3()` 等 API 关键词 |
+| `skills/mini-three-adapter-dev/SKILL.md` | Skill 入口：frontmatter + 14 条硬规则 + 参考索引 | 本 Skill **仅显式触发**：frontmatter 必须保留 `disable-model-invocation: true` 与 `metadata.opencode/autoinvoke: false`；description 保持简短（说明用途 + 「仅在用户显式点名时加载」），不要往 description 里堆 API 触发关键词 |
 | `skills/mini-three-adapter-dev/references/01–07` | 按需加载的详细文档 | 新增/改名必须同步 `SKILL.md` 文末索引 |
 | `skills/mini-three-adapter-dev/assets/scaffold/` | 可运行工程模板，由 `new_project.mjs` **整目录复制** | 改模板只能改这里；生成后的工程不会反向同步 |
 | `skills/mini-three-adapter-dev/scripts/` | 三个独立校验/生成脚本，只依赖 Node 内置模块 | 不要引入 npm 依赖，也不要把它们复制进 scaffold |
@@ -92,7 +92,7 @@ node <仓库>/skills/mini-three-adapter-dev/scripts/check_bundle.mjs ./dist
    | 版本号 / 验证数字 | `skills/mini-three-adapter-dev/SKILL.md`（frontmatter + 验证记录）、`AGENTS.md`、`assets/scaffold/package.json`、`references/` 中的版本引用 |
 
 4. **更新五个面（新增检查时再做反向验证）**：
-   - `SKILL.md`：`version` 递增（如 1.2.0 → 1.3.0）、description 触发词、目标版本、硬规则、反模式、工具说明、验证记录、完成定义。
+   - `SKILL.md`：`version` 递增（如 1.2.0 → 1.3.0）、description 中的适配层版本号、目标版本、硬规则、反模式、工具说明、验证记录、完成定义。本 Skill 仅显式触发，description 不堆触发词；不要移除 `disable-model-invocation` / `opencode/autoinvoke` 两个开关。
    - `references/01–07`：API 速查、升级策略、排错表、检查清单、代码配方；新版本从旧版升级时在 `05-workflows.md` 增加 `<old> → <new>` 升级节。
    - `assets/scaffold`：精确版本、移除已过时的 workaround、更新 README 排错；保持 CJS + 真分包 + 扁平插件选项 + `es2019`。用 `npm i` 临时安装后回读 `package.json`，确认版本没被 npm 自动写成 `^x.y.z`。
    - `scripts/check_project.mjs`：新增版本告警与新反模式检查；保持既有错误码稳定，并更新预期基线。
