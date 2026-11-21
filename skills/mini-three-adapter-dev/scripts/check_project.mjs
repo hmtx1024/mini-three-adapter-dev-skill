@@ -143,15 +143,15 @@ if (pkgRaw) {
     const pkg = JSON.parse(pkgRaw);
     const deps = { ...pkg.dependencies, ...pkg.devDependencies };
     const adapter = deps['mini-three-adapter'];
-    if (!adapter) add('ERROR', 'NO_ADAPTER', '未声明 mini-three-adapter 依赖', 'npm i mini-three-adapter@0.1.7');
+    if (!adapter) add('ERROR', 'NO_ADAPTER', '未声明 mini-three-adapter 依赖', 'npm i mini-three-adapter@0.1.9');
     else {
       if (/^[~^]/.test(String(adapter))) add('WARN', 'ADAPTER_NOT_PINNED',
-        `mini-three-adapter ${adapter} 未锁定精确版本`, '使用精确版本（当前 0.1.7），升级走独立流程');
+        `mini-three-adapter ${adapter} 未锁定精确版本`, '使用精确版本（当前 0.1.9），升级走独立流程');
       const am = String(adapter).match(/(\d+)\.(\d+)\.(\d+)/);
-      if (am && Number(am[1]) === 0 && (Number(am[2]) < 1 || (Number(am[2]) === 1 && Number(am[3]) < 7))) {
+      if (am && Number(am[1]) === 0 && (Number(am[2]) < 1 || (Number(am[2]) === 1 && Number(am[3]) < 9))) {
         add('WARN', 'ADAPTER_OUTDATED',
-          `mini-three-adapter ${adapter} 早于 0.1.7，含已修复的图片事件 / 能力探测 / H5 原生事件缺陷`,
-          '升级到 0.1.7；升级后复核 capabilities.webgl2Source 与 runtime.report()');
+          `mini-three-adapter ${adapter} 早于 0.1.9，含真机图片事件 / 能力探测 / H5 原生事件缺陷（<0.1.8 真机纹理可能全部空白）`,
+          '升级到 0.1.9；升级后按 references/05-workflows.md §14 做真机纹理回归');
       }
     }
     const three = deps.three;
@@ -228,6 +228,9 @@ const rules = [
     '优先改成动态 import 求值顺序；保留时确认可逆与 dispose'],
   [/capabilities\s*:\s*\{[^}]*\bwebgl2\s*:\s*false/, 'WARN', 'HARDCODED_WEBGL2_FALSE',
     '用 capabilities.webgl2: false 覆盖了适配层探测结果', '让适配层探测；看 webgl2Source，inferred=false 只是推断，以渲染器创建成功为准'],
+  [/Object\.defineProperty\s*\(\s*[\w$.]*(?:img|image|host|raw|texture)[\w$]*\s*,\s*['"](?:src|onload|onerror)['"]/i, 'WARN', 'HOST_ACCESSOR_OVERRIDE',
+    '在图片宿主对象上用 defineProperty 接管 src / onload / onerror（0.1.5 时代的 workaround）',
+    '删除；数据属性 src 必须直通宿主 interceptor，onload getter 由适配层维护（ADR-0011/0012）'],
 ];
 for (const [re, level, code, message, fix] of rules) {
   if (re.test(srcAll)) add(level, code, message, fix);

@@ -16,7 +16,7 @@ import { RUNTIME_OPTIONS } from '../config/constants.js';
  * 若某个三方库无法被构建插件改写（读真实全局），才打开 installGlobals: true；
  * 它是可逆的逃生舱，不是默认路径。
  *
- * 能力探测由适配层负责（0.1.7）：
+ * 能力探测由适配层负责（0.1.9）：
  *   - 优先用 wx.createOffscreenCanvas()；
  *   - 小游戏在离屏 API 存在、上屏画布已解析时，才回退第二次 createCanvas()，
  *     并按 reservedCanvases 做对象身份守卫，避免把上屏画布探测废掉；

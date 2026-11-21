@@ -18,7 +18,7 @@ node <SKILL_DIR>/scripts/check_bundle.mjs ./dist
 
 ## 2. 把适配层接入已有小游戏项目
 
-1. 依赖：`npm i mini-three-adapter@0.1.7 three@<精确版本>`、`npm i -D vite @types/three`（three ≥ 0.163，脚手架用 0.187.0）。0.1.7 修复了图片事件、能力探测、`new`/简写改写与 H5 原生事件，低于它先按 §13 升级。
+1. 依赖：`npm i mini-three-adapter@0.1.9 three@<精确版本>`、`npm i -D vite @types/three`（three ≥ 0.163，脚手架用 0.187.0）。0.1.9 修复了真机图片事件两层 P0、能力探测、`new`/简写改写与 H5 原生事件；低于 0.1.9 先按 §14（从 0.1.7）或 §13（从 0.1.1）升级。
 2. `vite.config.ts` 加 `miniThree({ outputDir, brotli, roots, webgpu:'warn' })`（**扁平选项**；上游 README / `docs/07` 的 `assets: {}` 是无效写法），`build.target:'es2019'`，`rollupOptions.input: 'src/main.ts'`，`output.format:'cjs'` + `entryFileNames:'game.js'` + `chunkFileNames:'chunks/[name]-[hash].js'` + `manualChunks`（adapter / three / 共享目录）。**不要用 `inlineDynamicImports`**，也不要用 `build.lib.formats:['es']`（上游 `docs/07` 示例仍是这样，小游戏产物必须是 CJS），见 `04-pitfalls.md` A11/C11。
 3. **改造入口**（最关键）：把 `main.ts` 里所有静态 three / 场景 import 删掉，改成：
 
@@ -45,7 +45,7 @@ node <SKILL_DIR>/scripts/check_bundle.mjs ./dist
 4. 若 decoder 用了 Worker：先 `await wx.preDownloadSubpackage({ packageType:'workers' })`，且**同时只跑一个 decoder 管线**（并发上限 1）。
 5. 远程模型放 CDN + 合法域名；包内模型用 `wx.getFileSystemManager().readFile()` 转 ArrayBuffer 再 `loader.parse()`。
 6. 加载后把 GLTF 里所有 geometry/material/texture 登记进 `DisposalGroup`。
-7. 纹理走 `TextureLoader` 时注意 2 秒 watchdog：包内 PNG/JPEG 正常；网络大图先 `wx.downloadFile` 到本地路径或预加载，否则会被判 `image-events-timeout`。
+7. 纹理走 `TextureLoader` 时注意 2 秒 watchdog：包内 PNG/JPEG 正常；网络大图先 `wx.downloadFile` 到本地路径或预加载，否则会被判 `image-events-timeout`。真机 `src` 为数据属性的宿主读不了 `mini-three-blob:` 对象 URL，GLTF 内嵌贴图先转 `data:` 或落盘。
 
 验收：真机能出模型；切换模型 20 次内存不持续增长；`missingAssets` 为空；没有图片事件超时告警。
 
@@ -160,7 +160,7 @@ runtime.on('contextlost', () => { /* 标记需重建；onShow 时重建 RenderTa
 约束：不得破坏 01-adapter-anatomy.md §1.2 的十条不变量。
 ```
 
-## 13. 升级 mini-three-adapter（0.1.1 → 0.1.7）
+## 13. 升级 mini-three-adapter（0.1.1 → 0.1.7，历史）
 
 本 Skill 旧版基于 0.1.1；0.1.2–0.1.7 的不变量没变，但多处运行时行为与构建产物已修正。升级步骤：
 
@@ -181,3 +181,17 @@ runtime.on('contextlost', () => { /* 标记需重建；onShow 时重建 RenderTa
 | 0.1.5 | 图片四级兜底；`src` 数据属性写入；`complete` / `decode()` 语义 |
 | 0.1.6 | 图片 watchdog 无条件生效（接受 `onload` 赋值但不调用的宿主也能收敛） |
 | 0.1.7 | Browser `nativeEventTarget`（真实 DOM 事件不再被吞）；Vite 6 `transform` 类型修复 |
+| 0.1.8 | 真机「事件触发时读 `image.onload`」不再被 shim getter 遮蔽（ADR-0011）；超时补 `image-events-timeout` `warnOnce` |
+| 0.1.9 | `src` 为数据属性的真机宿主完全直通 + 有界轮询兜底；`addEventListener` 与回调槽位并行接线；对象 URL 告警（ADR-0012） |
+
+## 14. 升级 mini-three-adapter（0.1.7 → 0.1.9，真机图片事件）
+
+0.1.8 / 0.1.9 只改 `src/core/image.ts` 与文档，**公开 API、插件选项与构建形态都没变**；但真机纹理加载行为有本质差异：0.1.7 的产物在真机上可能所有纹理空白，模拟器却完全正常。
+
+1. `npm i -E mini-three-adapter@0.1.9`，删除 `node_modules/.vite` 后重建；确认 `package.json` 写的是精确版本 `0.1.9`，不是 `^0.1.9`；`three` 仍精确锁定。
+2. **删除应用层 workaround**：任何在 `wx.createImage()` 返回对象上 `Object.defineProperty(img, 'src' | 'onload' | 'onerror', …)`、手写 `onload` 转发器、或依赖 `img.onload === fn` 做判断的代码都要删掉。0.1.9 自己按宿主描述符分流；再包一层会把原生加载钩子换死（ADR-0012）。
+3. 不要再假设 `addEventListener` 可用：真机可能只注册、从不派发。适配层已并行接 `onload`/`onerror`，业务照常使用 `TextureLoader` / `ImageLoader` 即可。
+4. **真机（不是模拟器）回归**：包内 PNG/JPEG、GLTF 纹理、启动页插图都能出图；console 没有 `image-events-timeout`、`image-src-object-url`、`image-events-unavailable`。超时告警的 `path` 会写成 `addEventListener+onload` 这类组合值，按它判断哪条通道「看起来挂上了」。
+5. GLTF 内嵌贴图（`mini-three-blob:` 对象 URL）在 `src` 为数据属性的真机宿主上仍不可用：先转 `data:` URI，或落盘到 `wx.env.USER_DATA_PATH` 再赋路径。上游文件桥尚未实现，遇到 `image-src-object-url` 不要误判为 0.1.9 回归。
+6. 用 `warnOnce` 的宿主形状排查：`hostShape.src` 为 `data` 是「数据属性直通」宿主（真机常见），`accessor` 是模拟器 / H5 形态；`onload` / `onerror` 的槽位形态同理。
+7. 重跑 `check_project.mjs` / `typecheck` / `build` / `smoke` / `h5:build` / `check_bundle.mjs`；把适配层版本与真机结论写进 `docs/compat.md`。

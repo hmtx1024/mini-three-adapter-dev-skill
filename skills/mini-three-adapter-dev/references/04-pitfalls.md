@@ -38,10 +38,13 @@
 | B12 | 切场景后内存持续上涨直至闪退 | `geometry/material/texture/renderTarget` 未 dispose，或静态单例持有引用 | 用 `DisposalGroup` 统一登记；切场景先释放旧场景；`renderer.dispose()` 前先 `setAnimationLoop(null)` |
 | B13 | 真机卡顿、发热 | 面数/纹理过大、drawcall 过多、每帧分配对象 | 合并几何、`InstancedMesh`、KTX2 压缩纹理、对象池、帧内零分配、`pixelRatioCap` 封顶 2 |
 | B14 | 小程序 `<canvas>` 取不到 node | 选择器/组件作用域错误、布局未完成 | 传 `selectorCtx: this`（自定义组件）、`queryDelay` 等一帧；WXML 用 `type="webgl2"` |
-| B15 | 纹理「加载成功」但贴图不显示；`texture.image` 没有 `src` / 宽高 | 0.1.3 前监听器里的 `this` 是内部事件载体，three `ImageLoader` 把载体存进了 `Texture.source.data` | 升级到 0.1.7；不要再自己用 `image.inlineHost` 取真图 |
-| B16 | `img.onload` / `addEventListener('load')` 永不触发，`ImageLoader` 靠业务超时 | 0.1.5 前图片 shim 没有把宿主原生事件桥接成合成事件；部分宿主接受 `onload` 赋值却不调用 | 升级到 0.1.7；看 `image-native-events` 告警 payload 里的宿主形态 |
-| B17 | H5 上 `pointer` / `wheel` 收不到，`canvas.dispatchEvent(realEvent)` 抛 `Cannot set property target` | 0.1.7 前 browser binding 用 `MiniEventTarget` 覆盖了真实 canvas 的事件方法 | 升级到 0.1.7（`nativeEventTarget: true`）；不要再 patch 浏览器 canvas，也不要把监听挂到 `document` 绕开 |
-| B18 | 网络大图纹理 2 秒后报 `image-events-timeout` | watchdog 无条件生效，按包内纹理的 2 秒预算判定 | 先 `wx.downloadFile` 到本地路径，或预加载后 `new THREE.Texture(image)`；包内 PNG/JPEG 不受影响 |
+| B15 | 纹理「加载成功」但贴图不显示；`texture.image` 没有 `src` / 宽高 | 0.1.3 前监听器里的 `this` 是内部事件载体，three `ImageLoader` 把载体存进了 `Texture.source.data` | 升级到 0.1.9；不要再自己用 `image.inlineHost` 取真图 |
+| B16 | `img.onload` / `addEventListener('load')` 永不触发，`ImageLoader` 靠业务超时 | 0.1.5 前图片 shim 没有把宿主原生事件桥接成合成事件；部分宿主接受 `onload` 赋值却不调用 | 升级到 0.1.9；看 `image-native-events` / `image-events-timeout` 告警 payload 里的宿主形态与 `path` |
+| B17 | H5 上 `pointer` / `wheel` 收不到，`canvas.dispatchEvent(realEvent)` 抛 `Cannot set property target` | 0.1.7 前 browser binding 用 `MiniEventTarget` 覆盖了真实 canvas 的事件方法 | 升级到 0.1.9（`nativeEventTarget: true`）；不要再 patch 浏览器 canvas，也不要把监听挂到 `document` 绕开 |
+| B18 | 网络大图纹理 2 秒后报 `image-events-timeout` | watchdog 无条件生效，按包内纹理的 2 秒预算判定 | 先 `wx.downloadFile` 到本地路径，或预加载后 `new THREE.Texture(image)`；包内 PNG/JPEG 不受影响。0.1.8+ 同时在裸 console 打 `warnOnce('image-events-timeout')` |
+| B19 | **真机所有纹理空白/超时，模拟器正常且日志无报错** | 0.1.7 的真机宿主在事件触发时**读 `image.onload`** 并调用读到的值；shim getter 回登记表，three 又从不赋 `onload`，于是读到 `undefined`，桥接永不执行 | 升级到 0.1.9（0.1.8 修复，ADR-0011）；日志里按 `image-events-timeout` 的 `path` / `src` 定位，不要再自己给 `onload` 包一层 |
+| B20 | **真机 `width/height` 恒 0、`complete` 恒 false、无任何事件**（升到 0.1.8 后仍不出图） | 真机 `src` 读取为**数据属性**但写入经宿主 interceptor 触发加载；`defineProperty` 接管（含「还原描述符再写一次」）把原生加载钩子换成死属性，图片从未开始加载 | 升级到 0.1.9（0.1.9 修复，ADR-0012）；删除任何 `Object.defineProperty(img, 'src', …)`，让普通写入直达宿主 |
+| B21 | 真机日志出现 `image-src-object-url`，GLTF 内嵌贴图/Blob 纹理失败 | 数据属性 `src` 宿主读不了 `mini-three-blob:` 对象 URL，原生加载器只认路径 / `data:` | 先把对象 URL 转成 `data:` URI，或写入 `wx.env.USER_DATA_PATH` 再赋本地路径；上游文件桥尚未实现，这不是 0.1.9 回归 |
 
 ## C. 构建 / 包体
 
@@ -60,9 +63,9 @@
 | C11 | 构建产物有多个 chunk，真机加载失败 | chunk 之间是 ESM `import()` 加载（格式没设 cjs），或 chunk 反向 `require` 入口形成环 | `output.format: 'cjs'`；用 `manualChunks` 把入口与 chunk 共用的模块（`src/config/`、`src/core/`）单独拆出 |
 | C12 | 升级 three 后控件失效 | `three/addons/*` 路径、`outputColorSpace` 取代 `outputEncoding`、r180+ 破坏性改名 | 按 `03-platform-constraints.md` §2.10 流程逐项复核；锁定精确版本 |
 | C13 | `parseFailures` 非空 | 某模块语法 Babel 不支持 | 查看具体 id，给 `rewrite` 加语法插件或用 `exclude` 排除；**不要**改成正则替换 |
-| C14 | 真机首屏 `Class constructor ... cannot be invoked without 'new'`，栈顶在 `GLTFLoader.js` 的 `new TextDecoder()` | 0.1.2 前的改写产出 `(new __m3()).TextDecoder()`，类被当普通函数调用 | 升级到 0.1.7；清理构建缓存后重建，确认产物里没有 `new __m3().` 残留 |
-| C15 | 产物 `SyntaxError: Unexpected token '.'`，出现 `{ __m3().xxx }` | 0.1.2 前对象简写属性被原地替换 | 升级到 0.1.7；不要用正则修补 |
-| C16 | `vite.config.ts` 在 Vite 6 下报 `TS2769`（`map` 不能赋给 `SourceMapInput`） | 0.1.7 前 `MiniThreePlugin.transform` 把 `map` 声明成 `unknown` | 升级到 0.1.7（改用 `BuildSourceMap`） |
+| C14 | 真机首屏 `Class constructor ... cannot be invoked without 'new'`，栈顶在 `GLTFLoader.js` 的 `new TextDecoder()` | 0.1.2 前的改写产出 `(new __m3()).TextDecoder()`，类被当普通函数调用 | 升级到 0.1.9；清理构建缓存后重建，确认产物里没有 `new __m3().` 残留 |
+| C15 | 产物 `SyntaxError: Unexpected token '.'`，出现 `{ __m3().xxx }` | 0.1.2 前对象简写属性被原地替换 | 升级到 0.1.9；不要用正则修补 |
+| C16 | `vite.config.ts` 在 Vite 6 下报 `TS2769`（`map` 不能赋给 `SourceMapInput`） | 0.1.7 前 `MiniThreePlugin.transform` 把 `map` 声明成 `unknown` | 升级到 0.1.9（改用 `BuildSourceMap`） |
 | C17 | 配置了 `manualChunks` 却仍只有 `game.js`，没有 `chunks/`；项目路径含 `mini-three-adapter` 时必现 | 适配层分组写成 `id.includes('mini-three-adapter')`，把项目目录名也匹配了，整个模块图被塞进同一组 | 改成 `id.includes('/node_modules/mini-three-adapter/')`；`check_project.mjs` 会报 `BROAD_ADAPTER_CHUNK` |
 
 ## D. 平台 / 真机 / 网络
@@ -95,11 +98,11 @@
    console.log(runtime.report()) → webgl2 / webgl2Source / offscreenCanvas / worker / wasm / baseLibraryVersion
    runtime.capabilities 结构化落盘到 docs/compat.md
    getEarlyScopeReads() → 是否有模块在 runtime 之前求值（旧版适配层没有此函数）
-   纹理问题看 image-native-events / image-events-timeout 告警的 reason 与宿主形状
+   纹理问题看 image-native-events / image-events-timeout / image-events-unavailable / image-src-object-url 告警的 reason、path 与宿主形状
 3. 分层隔离
    H5（createBrowserRuntime）能否复现？
      能 → 业务/three 代码问题（与平台无关），在浏览器里用 DevTools 查；
-          先确认是 0.1.7+，旧版的 H5 canvas 事件会被适配层吞掉
+          先确认是 0.1.9+，旧版的 H5 canvas 事件会被适配层吞掉
      不能 → 平台差异，按上表 B/D 类排查
 4. 最小化
    换回 scenes/boot 最小立方体场景；能出图再逐个加回资源/控制器/后处理

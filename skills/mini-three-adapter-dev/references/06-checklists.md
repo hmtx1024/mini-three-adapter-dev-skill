@@ -2,7 +2,7 @@
 
 ## A. 生成 / 修改代码后的 AI 自检
 
-- [ ] `mini-three-adapter` 精确锁定 `0.1.7`（低于它先按 `05-workflows.md` §13 升级）
+- [ ] `mini-three-adapter` 精确锁定 `0.1.9`（低于它先按 `05-workflows.md` §14 或 §13 升级）
 - [ ] `main.ts` 静态导入图里**没有** `three`（`import type` 除外）
 - [ ] `createWeChatGameRuntime()` 在动态 `import('./app/GameApp.js')` **之前**完成
 - [ ] 没有手写 1×1 离屏探测，也没有用 `capabilities.webgl2` 覆盖探测结果；画质看 `webgl2Source`，渲染器创建成功为准
@@ -25,7 +25,8 @@
 - [ ] `scene.remove()` 后 `geometry/material/texture/renderTarget.dispose()`
 - [ ] 没有 `three/webgpu` / `WebGPURenderer` / TSL / NodeMaterial
 - [ ] decoder 路径取 `config/constants.ts`，与 `decoderPaths` 一致
-- [ ] 纹理在 2 秒 watchdog 内可完成；网络大图走 `wx.downloadFile` / 预加载，不直接依赖慢 `img.src`
+- [ ] 纹理在 2 秒 watchdog 内可完成；网络大图走 `wx.downloadFile` / 预加载，不直接依赖慢 `img.src`；数据属性 `src` 的真机宿主不读 `mini-three-blob:` 对象 URL
+- [ ] 没有在 `wx.createImage()` 返回对象上 `defineProperty` 接管 `src` / `onload` / `onerror`（0.1.9 已按宿主描述符分流）
 - [ ] 小程序：WXML 五个 `bindtouch*` 都转发 `runtime.handleTouch(e)`，自定义组件传 `selectorCtx`
 - [ ] 没有 `eval` / `new Function` / 业务侧 `Proxy`
 - [ ] 资源只从 `manifest.ts` 的 id 引用，没有散落的路径字符串
@@ -33,7 +34,7 @@
 ## B. 构建期
 
 - [ ] `node <SKILL_DIR>/scripts/check_project.mjs <project>` 无 ERROR（`ADAPTER_OUTDATED` 应为空）
-- [ ] `npm run typecheck` 通过（Vite 6 + 0.1.7 不应出现 `TS2769`）
+- [ ] `npm run typecheck` 通过（Vite 6 + 0.1.9 不应出现 `TS2769`）
 - [ ] `npm run build` 通过，产物为 `dist/game.js` + `dist/chunks/*.js`（three 在独立 chunk，入口 < 400 KB）
 - [ ] `npm run h5:build` 通过（H5 不在 `npm run check` 里；改了 `bootstrap.h5.ts` 必须单独跑）
 - [ ] 产物里没有 `new __m3().` / `{ __m3().xxx }` 残留（0.1.2 前的改写缺陷）
@@ -70,7 +71,7 @@
 ## E. 真机验收（发布前，iOS + 中低端安卓各一台）
 
 - [ ] WebGL2 正常出图；若 `runtime.report()` 显示 `webgl2: false`，确认 `webgl2Source` 是 `inferred` 还是 `probe`（以渲染器创建成功为准）
-- [ ] 包内 PNG/JPEG 纹理与 GLTF 纹理能加载；没有 `image-events-timeout` 告警
+- [ ] 包内 PNG/JPEG 纹理与 GLTF 纹理能加载；`width/height` 非 0、`complete` 为 true；没有 `image-events-timeout` / `image-src-object-url` / `image-events-unavailable` 告警
 - [ ] `runtime.report()` 已保存并追加到 `docs/compat.md`（适配层 / three 版本 / 基础库 / 机型 / webgl2Source）
 - [ ] 单指旋转、双指缩放/旋转不卡死；`touchcancel` 后指针计数归零
 - [ ] 点击/射线拾取坐标正确（刘海屏、不同 DPR、横竖屏各测一次）
@@ -102,3 +103,5 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 2026-11-13 | 0.1.7 | 0.187.0 | 3.x | iPhone 13 / iOS 17 | boot | ✅ | webgl2=true/probe, worker=false |
 ```
+
+> 从 0.1.7 升级到 0.1.9 时，必须补一行**真机**记录：纹理是否出图、有无 `image-events-timeout` / `image-src-object-url`。模拟器通过不能替代真机（0.1.7 的图片 P0 正是只在真机暴露）。

@@ -13,7 +13,7 @@
     "check": "npm run typecheck && npm run build && npm run smoke"
   },
   "dependencies": {
-    "mini-three-adapter": "0.1.7",
+    "mini-three-adapter": "0.1.9",
     "three": "0.187.0"
   },
   "devDependencies": {

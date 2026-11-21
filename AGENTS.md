@@ -19,7 +19,7 @@ mini-three-adapter-dev-skill/
 
 如果任务只是「用这个 Skill 开发项目」，读 `skills/mini-three-adapter-dev/SKILL.md`，不要改本仓库。
 
-目标适配层版本：`mini-three-adapter@0.1.7`（`three@0.187.0`）。
+目标适配层版本：`mini-three-adapter@0.1.9`（`three@0.187.0`）。
 
 `.tmp/` 是工作区：上游适配层源码（`.tmp/mini-three-adapter`）、验证工程、临时脚本和日志都放这里。**不要**把 `.tmp/` 当作 Skill 内容，也不要从 `.tmp/` 反向覆盖正式文件。
 
@@ -57,7 +57,7 @@ node <仓库>/skills/mini-three-adapter-dev/scripts/check_project.mjs .
 node <仓库>/skills/mini-three-adapter-dev/scripts/check_bundle.mjs ./dist
 ```
 
-预期：`game.js` 约 1.3 KB、4 个 chunk、`dist` 约 0.58 MB；check 脚本 0 error，`check_bundle` PASS。`smoke` 在 Node 里伪造 wx 宿主，固定等待 2.5 秒，退出前删除 `.smoke/`。
+预期：`game.js` 约 1.26 KB、4 个 chunk、`dist` 约 0.58 MB；check 脚本 0 error，`check_bundle` PASS。`smoke` 在 Node 里伪造 wx 宿主，固定等待 2.5 秒，退出前删除 `.smoke/`。
 
 - `URL_CHECK_OFF` 是模板故意设置 `urlCheck: false` 导致的预期警告，不要为了消警告改模板。
 - `check_project.mjs` / `check_bundle.mjs` 支持 `--json`；错误码（如 `NO_LAZY_CHUNK`、`STATIC_THREE_IN_MAIN`）是给 CI/AI 的接口，保持稳定。`new_project.mjs` 不支持 `--json`。
@@ -78,7 +78,7 @@ node <仓库>/skills/mini-three-adapter-dev/scripts/check_bundle.mjs ./dist
 
    以 npm `dist-tags.latest` 和对应 tag 为准，不要假设 `SKILL.md` 里写的版本是最新。`.tmp/mini-three-adapter` 已存在时直接 `git -C .tmp/mini-three-adapter fetch --tags`，不要重复克隆。若 latest 已等于当前目标版本，先核对 CHANGELOG 是否还有未同步项；只补差量，不要重写整套文档。
 
-2. **读上游事实源**：`AGENTS.md`、`llms.txt`、`CHANGELOG.md`、`docs/04-api-reference.md`、`docs/05-build-plugin.md`、`docs/06-platform-notes.md`、`docs/07-integration-guide.md`、`docs/11-compat-matrix.md`、相关 ADR，以及 `src/**` 的公开类型和关键实现。文档与源码冲突时**以源码为准**；0.1.7 时上游 README / `docs/07` 的 `assets: {}` 与 ESM lib 示例是错的，下次更新要重新核实，不要盲信文档。
+2. **读上游事实源**：`AGENTS.md`、`llms.txt`、`CHANGELOG.md`、`docs/04-api-reference.md`、`docs/05-build-plugin.md`、`docs/06-platform-notes.md`、`docs/07-integration-guide.md`、`docs/11-compat-matrix.md`、相关 ADR，以及 `src/**` 的公开类型和关键实现。文档与源码冲突时**以源码为准**；0.1.9 时重新核实，上游 README / `docs/07` 的 `assets: {}` 与 ESM lib 示例仍是错的，不要盲信文档。
 
 3. **列变更清单并定位到 Skill**：
 
@@ -97,7 +97,7 @@ node <仓库>/skills/mini-three-adapter-dev/scripts/check_bundle.mjs ./dist
    - `assets/scaffold`：精确版本、移除已过时的 workaround、更新 README 排错；保持 CJS + 真分包 + 扁平插件选项 + `es2019`。用 `npm i` 临时安装后回读 `package.json`，确认版本没被 npm 自动写成 `^x.y.z`。
    - `scripts/check_project.mjs`：新增版本告警与新反模式检查；保持既有错误码稳定，并更新预期基线。
    - `AGENTS.md`：锁定版本、预期产物数字、新的硬约束。
-   - 若新增检查规则，必须同时做**反向验证**（故意写坏一份 `.tmp` 工程，确认报出预期错误码）。例：把 adapter 规则改回 `id.includes('mini-three-adapter')` 应报 `BROAD_ADAPTER_CHUNK`；打开 `inlineDynamicImports` 应报 `INLINE_DYNAMIC_IMPORTS_BREAKS_EVAL_ORDER`。
+   - 若新增检查规则，必须同时做**反向验证**（故意写坏一份 `.tmp` 工程，确认报出预期错误码）。例：把 adapter 规则改回 `id.includes('mini-three-adapter')` 应报 `BROAD_ADAPTER_CHUNK`；打开 `inlineDynamicImports` 应报 `INLINE_DYNAMIC_IMPORTS_BREAKS_EVAL_ORDER`；在图片对象上写 `Object.defineProperty(img, 'src', …)` 应报 `HOST_ACCESSOR_OVERRIDE`。
 
 5. **全新验证，不复用旧工程**：
 
@@ -126,7 +126,8 @@ node <仓库>/skills/mini-three-adapter-dev/scripts/check_bundle.mjs ./dist
 - 一条硬规则通常同时出现在：`skills/mini-three-adapter-dev/SKILL.md` 硬规则、`references/04-pitfalls.md`、`references/06-checklists.md`、`references/07-code-recipes.md`、`assets/scaffold/`、`scripts/check_project.mjs`。只改文案不同步 checker，规则就不可执行；只改 checker 不同步文档，用户看不到。
 - `check_project.mjs` 是**基于文本正则**的检查，且先剥离注释。重构 `vite.config.ts` 的写法后，确认对应正则仍能命中；注释里出现反例不会误报。
 - 以下配置是承重墙，不要“简化”：CJS 输出 + `chunkFileNames` + `manualChunks`、禁止 `inlineDynamicImports`、`target: 'es2019'`、`modulePreload: false`、`preserveEntrySignatures: false`、`miniThree()` 扁平选项（上游 README 的 `assets: {}` 是无效写法）。`manualChunks` 的 adapter 规则必须写成 `id.includes('/node_modules/mini-three-adapter/')`；写成不带 `node_modules` 的包名会匹配项目目录，导致单文件产物（`check_project.mjs` 有 `BROAD_ADAPTER_CHUNK`）。
-- 依赖精确锁定：`three@0.187.0`、`mini-three-adapter@0.1.7`。升级时同步 `assets/scaffold/package.json`、`SKILL.md` 的「脚手架验证记录」、以及 references 中引用的版本/体积数字。
+- 图片宿主属性边界是上游 ADR-0011/0012 的硬约束：`onload` / `onerror` getter 在非派发期间必须返回桥接函数，`src` 读取为数据属性时不得用 `defineProperty` 接管（「还原描述符再写一次」也不行）。0.1.8/0.1.9 的真机 P0 都源于违反这两条；脚手架、示例与文档里不要再引入图片访问器 workaround，`check_project.mjs` 有 `HOST_ACCESSOR_OVERRIDE`。
+- 依赖精确锁定：`three@0.187.0`、`mini-three-adapter@0.1.9`。升级时同步 `assets/scaffold/package.json`、`SKILL.md` 的「脚手架验证记录」、以及 references 中引用的版本/体积数字。
 - scaffold 的 `package.json` 是 `"type": "module"`（供 `vite.config.ts`、`postbuild.mjs` 使用），但构建产物是 CommonJS；`smoke.cjs` 会把 `dist` 复制到 `.smoke/` 并写入 `{"type":"commonjs"}` 再执行。不要把项目类型改成 commonjs，也不要提交 `dist/` 或 `.smoke/`。
 - 文档和代码注释用简体中文；注释解释「为什么」（平台坑、求值顺序），不是复述代码。
 

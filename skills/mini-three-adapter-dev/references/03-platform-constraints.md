@@ -121,7 +121,7 @@
 2. 适配层 `docs/11` 把 `WXWebAssembly` 标为最低 2.13.0（Worker 内 2.15.0），Worker 分包预下载标 2.0.10 —— 官方 Worker 文档当前写 **2.27.3**。以官方当前文档 + 真机 `wx.canIUse` 为准。
 3. 官方 Adapter 页面 2026-04-09 版本**没有**「weapp-adapter 不再维护」这句话（英文 PDF 与部分第三方文章有此说法）。稳妥表述：官方明确它「模拟远不完整、仅供参考、需按引擎自行扩展」，且不属于基础库 —— 这正是使用 `mini-three-adapter` 这类专用适配层的理由。
 
-## 3.10 能力探测口径（适配层 0.1.7）
+## 3.10 能力探测口径（适配层 0.1.9）
 
 - 顺序：离屏 `createOffscreenCanvas` 实测 → 主画布第二次 `createCanvas` 实测（仅小游戏、仅离屏 API 存在、上屏画布已解析）→ 基础库版本推断。
 - 主画布回退前用 `reservedCanvases`（本次画布 + 缓存 + `GameGlobal.screencanvas` + `globalThis.canvas`）逐个比对身份；命中任一就放弃，避免 `getContext` + `WEBGL_lose_context` 废掉上屏画布。

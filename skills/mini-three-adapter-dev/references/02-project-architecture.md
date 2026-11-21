@@ -111,7 +111,7 @@ main.ts
    - decoder 路径取 `config/constants.ts` 的 `DECODER_BASE`，必须与 `decoderPaths` 一致。
    - worker 分包：先 `await wx.preDownloadSubpackage({ packageType: 'workers' })`，成功后才 `wx.createWorker()`；并发上限 1，用完 `terminate()`。
    - 包内静态资源：`wx.getFileSystemManager().readFile()`；远程资源：HTTPS + 合法域名白名单。
-   - 图片纹理：适配层有 2 秒事件 watchdog；网络大图先 `wx.downloadFile` 到本地路径，不要直接依赖慢 `img.src`。
+   - 图片纹理：适配层有 2 秒事件 watchdog；网络大图先 `wx.downloadFile` 到本地路径，不要直接依赖慢 `img.src`。真机 `src` 为数据属性的宿主还不能读 `mini-three-blob:` 对象 URL（GLTF 内嵌贴图），需先转 `data:` 或落盘到 `USER_DATA_PATH`。
 5. **释放**：所有 `Texture` / `Geometry` / `Material` / `RenderTarget` 通过 `DisposalGroup.track()` 登记；切场景自动释放。
 
 ## 2.6 配置与环境
@@ -138,7 +138,7 @@ main.ts
 
 - 启动：`console.log(runtime.report())`，并把 `runtime.capabilities`（含 `webgl2Source`）上报/落盘到 `docs/compat.md`；`getEarlyScopeReads()` 非空说明有模块求值过早。
 - 构建：CI 打印 `plugin.api.report()`，把 `parseFailures.length === 0`、`missingAssets` 白名单作为门禁。
-- 运行：`wx.onError` / `wx.onUnhandledRejection` → 统一上报；`runtime.on('error')` 在 0.1.7 只有类型、没有生产方，不能当成唯一错误出口。
+- 运行：`wx.onError` / `wx.onUnhandledRejection` → 统一上报；`runtime.on('error')` 在 0.1.9 仍只有类型、没有生产方，不能当成唯一错误出口。
 - 性能：`runtime.frames.fps`、`slowFrameThreshold`、`wx.onMemoryWarning`；真机用开发者工具性能面板 / 小游戏数据助手。
 - 埋点带上 `适配层版本 / three 版本 / baseLibraryVersion / webgl2Source / 机型 / tier`，让线上问题可归类。
 
@@ -161,7 +161,7 @@ main.ts
 | 变更 | 影响面 | 流程 |
 | --- | --- | --- |
 | 升 three 大版本 | `DEFAULT_GLOBAL_NAMES`（插件）、`patchElement` 属性、addons 路径、`outputColorSpace`、WebGPU 入口 | 先查 Migration Guide → H5 冒烟 → 真机回归 → 更新 `docs/compat.md`；用 `package-lock.json` 锁定，禁止 `^` 漂移 |
-| 升 mini-three-adapter | `platform/bootstrap.ts` + 构建配置 | 读 CHANGELOG；跑 `check_project.mjs`；比对 `runtime.report()`（`webgl2Source`）；0.1.7 起移除手写能力探测，按 `05-workflows.md` §13 回归图片/H5 事件 |
+| 升 mini-three-adapter | `platform/bootstrap.ts` + 构建配置 | 读 CHANGELOG；跑 `check_project.mjs`；比对 `runtime.report()`（`webgl2Source`）；0.1.7 起移除手写能力探测，0.1.9 起按 `05-workflows.md` §14 回归真机图片事件、删除图片宿主上的 `defineProperty` workaround |
 | 升基础库 | `capabilities` / resize / Worker / 高性能模式 | 在 `docs/compat.md` 记录最低基础库；`wx.canIUse()` 做能力保护 |
 | 加新平台 | 新增 `platform/bootstrap.<x>.ts` + 对应构建配置 | 实现/复用 `PlatformBinding`；`scenes/` 零改动 |
 | 加新场景 | 只加 `scenes/<feature>/` + 在 `SceneManager` 注册 | 走 `Scene` 契约与 `DisposalGroup` |
