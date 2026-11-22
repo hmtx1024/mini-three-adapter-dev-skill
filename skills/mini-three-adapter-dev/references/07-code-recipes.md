@@ -106,7 +106,7 @@ export default defineConfig({
     "smoke": "node scripts/smoke.cjs",
     "check": "npm run typecheck && npm run build && npm run smoke"
   },
-  "dependencies": { "mini-three-adapter": "0.1.9", "three": "0.187.0" },
+  "dependencies": { "mini-three-adapter": "0.1.11", "three": "0.187.0" },
   "devDependencies": { "@types/three": "0.187.0", "typescript": "^5.7.0", "vite": "^6.0.0" }
 }
 ```
@@ -291,7 +291,17 @@ export function createLoaderFactory(renderer: THREE.WebGLRenderer, group: Dispos
 >
 > 网络纹理不要直接依赖慢 `img.src`：适配层的图片事件 watchdog 按包内纹理设 2 秒，超时派发 `image-events-timeout` 并在裸 console 打 `warnOnce`。先 `wx.downloadFile` 拿到本地路径，再交给 `TextureLoader` / `new THREE.Texture(image)`。
 >
-> 真机 `wx.createImage()` 的 `src` 可能是数据属性（写入经宿主 interceptor 触发加载）：0.1.9 对此完全直通，**不要**再 `Object.defineProperty(img, 'src', …)` 包一层。这类宿主读不了 `mini-three-blob:` 对象 URL；GLTF 内嵌贴图先转 `data:` URI 或写入 `wx.env.USER_DATA_PATH`，否则会看到 `image-src-object-url` 告警。
+> 真机 `wx.createImage()` 的 `src` 可能是数据属性（写入经宿主 interceptor 触发加载）：0.1.9 对此完全直通，**不要**再 `Object.defineProperty(img, 'src', …)` 包一层。0.1.10 起对象 URL 由 `URL.createObjectURL` 同步返回 `data:` URI，GLTF 内嵌贴图可直接加载；`revokeObjectURL()` 是 no-op，超长 `data:` URI 会让内存峰值变大，超大贴图仍建议外部化。
+>
+> 宿主取图语义与 `wx.createImage()` 不同时，用 0.1.11 的 `createImage` 选项，而不是包装返回对象：
+>
+> ```ts
+> const runtime = await createWeChatGameRuntime({
+>   createImage: () => host.createImage(), // 必须返回宿主自己的 image（WxImage）
+> });
+> ```
+>
+> 事件桥接、`src` 分流与兜底仍由适配层就地完成；返回值禁止 Proxy / 克隆，抛错不会被吞。
 
 ## 6. 分包 / Worker 预下载
 

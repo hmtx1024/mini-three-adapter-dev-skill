@@ -1,6 +1,6 @@
 # 01 · 适配层解剖与 API 速查
 
-> 依据 `mini-three-adapter@0.1.9` 源码逐文件核对（`src/**`，2026-11-21）。与上游 README/docs 冲突处以源码为准；0.1.1→0.1.7 见 `05-workflows.md` §13，0.1.7→0.1.9 见 §14。
+> 依据 `mini-three-adapter@0.1.11` 源码逐文件核对（`src/**`，2026-11-22）。与上游 README/docs 冲突处以源码为准；0.1.1→0.1.7 见 `05-workflows.md` §13，0.1.7→0.1.9 见 §14，0.1.9→0.1.11 见 §15。
 
 ## 1.1 一句话模型
 
@@ -62,9 +62,12 @@ createBrowserRuntime(options?): Promise<MiniThreeRuntime>
 createRuntime(platform: PlatformBinding | PlatformFactory, options?): Promise<MiniThreeRuntime>
 getScreenCanvas(wx, supplied?): WxCanvas
 resetScreenCanvasCache(): void                                 // 仅测试
+createImageFactory(wx, diagnostics?, options?): ImageFactory    // options.createImage 替换原始取图（0.1.11）
 ```
 
-`WeChatGameOptions`：`wx?`（注入 mock）、`canvas?`（复用已有上屏画布）、`capabilities?`（覆盖探测，`webgl2Source` 变为 `'override'`）、`diagnostics?`、`preferredFps?`（内部调 `wx.setPreferredFramesPerSecond`）。
+`WeChatGameOptions`：`wx?`（注入 mock）、`canvas?`（复用已有上屏画布）、`capabilities?`（覆盖探测，`webgl2Source` 变为 `'override'`）、`diagnostics?`、`preferredFps?`（内部调 `wx.setPreferredFramesPerSecond`）、`createImage?`（0.1.11，替换原始取图入口）。`WeChatMiniProgramOptions` 同样有 `createImage?`，另有 `selector` / `selectorCtx?` / `queryDelay?`。
+
+`createImage?: () => WxImage` 只替换**原始取图**（默认 `wx.createImage()` → `OffscreenCanvas.createImage()`）；事件桥接、`src` 分流、兜底与轮询仍由适配层就地补丁。返回值必须是宿主自己的 image，禁止包装 / 克隆 / Proxy；抛错不会被吞。
 
 `getScreenCanvas` 取值顺序：`options.canvas` → 模块级缓存 → `GameGlobal.screencanvas` → `globalThis.canvas`（weapp-adapter 遗留）→ `wx.createCanvas()`（**唯一一次**）。
 
@@ -102,7 +105,7 @@ installGlobals(scope, options?): () => void
 
 `RuntimeEvents`：`resize(info)`、`visibilitychange(visible)`、`contextlost()`、`dispose()`、`error(Error)`。
 
-> `error` 在 0.1.9 的类型里有、但 runtime 目前没有生产方；不要把它当唯一错误出口。真实错误仍走 `diagnostics` / `wx.onError` / `wx.onUnhandledRejection`，`runtime.on('error')` 可保留作前向兼容。
+> `error` 在 0.1.11 的类型里有、但 runtime 目前没有生产方；不要把它当唯一错误出口。真实错误仍走 `diagnostics` / `wx.onError` / `wx.onUnhandledRejection`，`runtime.on('error')` 可保留作前向兼容。
 
 ### `RuntimeOptions` 全表
 
@@ -155,6 +158,7 @@ interface TouchLikeEvent { type: string; touches?: ArrayLike<TouchPoint>; change
 - 事件构造器：`Event`、`EventTarget`、`CustomEvent`、`PointerEvent`、`MouseEvent`、`TouchEvent`、`MessageEvent`、`ProgressEvent`、`KeyboardEvent`、`DOMException`。
 - DOM 构造器 shim：`HTMLElement`、`HTMLCanvasElement`、`HTMLImageElement`、`OffscreenCanvas`、`Image`、`ImageData`、`DOMRect`、`WebGLRenderingContext`、`WebGL2RenderingContext`、`AudioContext`。
 - 网络/编码：`Blob`、`URL`、`TextEncoder/Decoder`、`fetch`、`XMLHttpRequest`、`AbortController/AbortSignal`、`atob/btoa`。
+- 对象 URL：`URL.createObjectURL(blob)` **同步返回 `data:` URI**（0.1.10，ADR-0013），不是 `blob:`，也不再产生 `mini-three-blob:` 句柄；`revokeObjectURL()` 为 no-op，`resolveObjectURL()` 恒为 `null`。超大 Blob 会同步做 base64 编码。
 - **恒为 `undefined`**：`createImageBitmap`、`FileReader`、`WebSocket`、`HTMLVideoElement`；`ResizeObserver` 是 no-op 类。让 three 自动走降级分支，不要伪造半实现。
 - `Worker` / `WebAssembly` 透传宿主全局（`WebAssembly` 或 `WXWebAssembly`）。
 - 未创建 runtime 时 `getActiveScope()` 返回占位对象：`window/self/globalThis` 指向自身（`typeof` 为 `'object'`）；`document/navigator/screen/location/history` 读作 `undefined`（`typeof window.document` 也不抛）；其余键读取即抛 `Scoped global "xxx" was read before a runtime was created`。
@@ -206,20 +210,20 @@ interface TouchLikeEvent { type: string; touches?: ArrayLike<TouchPoint>; change
 
 ### 图片事件桥接（纹理加载）
 
-`wx.createImage()` 返回对象的形状因宿主而异，且**模拟器与真机是不同形态**。`createImageFactory` 在 `patchElement` **之前**抓取原生入口，按以下顺序建立桥接：
+`wx.createImage()` 返回对象的形状因宿主而异，且**模拟器与真机是不同形态**。默认取图入口是 `wx.createImage()` → `OffscreenCanvas.createImage()`；0.1.11 起可通过 `createImageFactory(wx, diagnostics, { createImage })` 或 runtime 的 `createImage` 选项替换**原始取图**，后续桥接仍就地完成。`createImageFactory` 在 `patchElement` **之前**抓取原生入口，按以下顺序建立桥接：
 
 1. 原生 `addEventListener('load' | 'error')`；
 2. 直接赋值 `img.onload` / `img.onerror` 槽位；
    - 1、2 两级**并行**接线，不是 else-if：真机的 `addEventListener` 可能是「只注册、从不派发」的空壳（0.1.9 真机探针），只挂第 1 级会让槽位永远不接线。`finish` 幂等，双通道也只收敛一次；watchdog 超时的 `path` 报组合值（如 `addEventListener+onload`）。
    - 用户访问器在**非派发期间 getter 恒回桥接函数**，只有 `dispatchEvent` 行内派发期间返回登记的业务回调。真机在事件触发时**读 `image.onload` 属性**再调用，而 three 只用 `addEventListener`、从不赋 `onload`；旧 getter 回登记表会让它读到 `undefined`（0.1.7 真机空白根因，ADR-0011）。`finish` 幂等保证「既存又读」的宿主不会双发。
 3. `wx.getImageInfo`（只解码元数据，**不能**合成 `load`，只用于诊断/失败归因）；
-4. **2 秒 watchdog**（无条件）：`src` 赋值即上闹钟；到点 `complete` 为真派发 `load`，否则派发带 `reason: 'image-events-timeout'` 的 `error` 并 `warnOnce('image-events-timeout', …, { path, src })`。
+4. **2 秒 watchdog**（无条件）：`src` 赋值即上闹钟；到点 `complete` 为真派发 `load`，否则派发带 `reason: 'image-events-timeout'` 的 `error` 并 `warnOnce('image-events-timeout', …, { path, src })`。超长 `data:` URI 会截断成 `data:image/png;base64,…(1772874 chars)`，避免兆字节日志。
 
 `src` **按捕获的描述符分流**（ADR-0012）：
 
-- **accessor（或无描述符）**：安装 shim 访问器，写入时把 `mini-three-blob:` 对象 URL 改写为 `data:` 并触发兜底；宿主原生 setter 直写。
+- **accessor（或无描述符）**：安装 shim 访问器并触发兜底；写入值原样交给宿主原生 setter。0.1.10 起对象 URL 本身就是 `data:` URI，不需要再改写。
 - **数据属性（真机形态）**：完全不安装访问器、绝不 `defineProperty`。普通写入直达宿主的属性 interceptor，原生加载钩子保持完好。兜底由有界轮询驱动：100ms 一次、最多 120 次（12s）等待**首次 `src` 赋值**——这不是把加载超时放宽到 12s，加载仍由 2s watchdog 判定；`finish` 或封顶后自动停表，创建后从未赋值的图片不保留定时器。
-- 数据属性宿主读不了 `mini-three-blob:` 对象 URL：检测到时 `warnOnce('image-src-object-url', …, { src })`。需先转 `data:` URI 或落盘 `wx.env.USER_DATA_PATH`（上游文件桥仍是待办）。
+- 数据属性宿主也能直接加载对象 URL：`URL.createObjectURL` 返回 `data:`（ADR-0013），不需要 `mini-three-blob:` 改写或落盘。
 
 真实事件优先，终态只派发一次；`complete` 在成功与失败后都为 `true`，`decode()` 失败时 reject。`crossOrigin` / `fetchPriority` 预置为可写数据成员（three 的 `ImageLoader` 会写 `fetchPriority`），避免给宿主新增未知成员。退化路径的 `warnOnce` payload 带 `onload` / `onerror` / `src` 的槽位形态（`accessor|data|data-readonly|missing`）、`addEventListener`、`getImageInfo`、`ownNames`，可直接贴 issue。
 

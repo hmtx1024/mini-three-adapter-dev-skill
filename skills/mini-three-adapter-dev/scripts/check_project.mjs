@@ -143,15 +143,15 @@ if (pkgRaw) {
     const pkg = JSON.parse(pkgRaw);
     const deps = { ...pkg.dependencies, ...pkg.devDependencies };
     const adapter = deps['mini-three-adapter'];
-    if (!adapter) add('ERROR', 'NO_ADAPTER', '未声明 mini-three-adapter 依赖', 'npm i mini-three-adapter@0.1.9');
+    if (!adapter) add('ERROR', 'NO_ADAPTER', '未声明 mini-three-adapter 依赖', 'npm i mini-three-adapter@0.1.11');
     else {
       if (/^[~^]/.test(String(adapter))) add('WARN', 'ADAPTER_NOT_PINNED',
-        `mini-three-adapter ${adapter} 未锁定精确版本`, '使用精确版本（当前 0.1.9），升级走独立流程');
+        `mini-three-adapter ${adapter} 未锁定精确版本`, '使用精确版本（当前 0.1.11），升级走独立流程');
       const am = String(adapter).match(/(\d+)\.(\d+)\.(\d+)/);
-      if (am && Number(am[1]) === 0 && (Number(am[2]) < 1 || (Number(am[2]) === 1 && Number(am[3]) < 9))) {
+      if (am && Number(am[1]) === 0 && (Number(am[2]) < 1 || (Number(am[2]) === 1 && Number(am[3]) < 11))) {
         add('WARN', 'ADAPTER_OUTDATED',
-          `mini-three-adapter ${adapter} 早于 0.1.9，含真机图片事件 / 能力探测 / H5 原生事件缺陷（<0.1.8 真机纹理可能全部空白）`,
-          '升级到 0.1.9；升级后按 references/05-workflows.md §14 做真机纹理回归');
+          `mini-three-adapter ${adapter} 早于 0.1.11，缺少真机图片事件修复、data: 对象 URL 与 createImage 取图入口（<0.1.8 真机纹理可能全部空白）`,
+          '升级到 0.1.11；升级后按 references/05-workflows.md §15 → §14 回归真机图片与对象 URL');
       }
     }
     const three = deps.three;
@@ -231,6 +231,9 @@ const rules = [
   [/Object\.defineProperty\s*\(\s*[\w$.]*(?:img|image|host|raw|texture)[\w$]*\s*,\s*['"](?:src|onload|onerror)['"]/i, 'WARN', 'HOST_ACCESSOR_OVERRIDE',
     '在图片宿主对象上用 defineProperty 接管 src / onload / onerror（0.1.5 时代的 workaround）',
     '删除；数据属性 src 必须直通宿主 interceptor，onload getter 由适配层维护（ADR-0011/0012）'],
+  [/mini-three-blob:/, 'WARN', 'LEGACY_OBJECT_URL_PREFIX',
+    '硬编码了 mini-three-blob: 前缀（0.1.10 起 URL.createObjectURL 直接返回 data: URI）',
+    '按 data: 字符串处理；revokeObjectURL 已是 no-op，不要依赖旧前缀或对象 URL 可 fetch（ADR-0013）'],
 ];
 for (const [re, level, code, message, fix] of rules) {
   if (re.test(srcAll)) add(level, code, message, fix);

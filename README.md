@@ -4,7 +4,7 @@
 
 把「微信小游戏平台约束」「mini-three-adapter 适配层行为」「可维护的工程架构」固化成一套可执行规范，并附带可运行脚手架、参考文档和静态校验脚本。
 
-目标环境：`mini-three-adapter@0.1.9` + `three@0.187.0` + Vite 6 + TypeScript。
+目标环境：`mini-three-adapter@0.1.11` + `three@0.187.0` + Vite 6 + TypeScript。
 
 > 给 AI 的入口是 [`skills/mini-three-adapter-dev/SKILL.md`](./skills/mini-three-adapter-dev/SKILL.md)；给维护者的入口是 [`AGENTS.md`](./AGENTS.md)；本文件面向第一次接触仓库的人。
 
@@ -38,6 +38,7 @@ Skill 名为 `mini-three-adapter-dev`，与 `SKILL.md` frontmatter 一致。
 - 能力探测不能偷走上屏画布，`webgl2Source` 为 `inferred` 时 `false` 不一定是真不支持
 - 图片纹理事件有 2 秒 watchdog，慢网络大图需要先下载
 - 真机图片的 `src` 是数据属性，不能被 `defineProperty` 接管；`onload` getter 也不能遮蔽桥接
+- 对象 URL 是同步生成的 `data:` URI，`revokeObjectURL` 为 no-op；取图差异走 `createImage` 选项
 - H5 真实 canvas 不能被二次 patch 事件系统
 - decoder、Worker、WASM、分包和包体预算都有平台限制
 
@@ -154,7 +155,7 @@ typecheck -> vite build -> postbuild（拷贝 game.json / 校验 manifest / 包�
 | Node | 24.9.0 |
 | Vite | 6.4.6 |
 | three | 0.187.0 |
-| mini-three-adapter | 0.1.9 |
+| mini-three-adapter | 0.1.11 |
 | 产物 | `game.js` 1.26 KB + 4 个 chunk，合计 0.58 MB（gzip 约 156 KB） |
 | `check_project` | 0 error（仅预期的 `URL_CHECK_OFF` 开发期警告） |
 | `check_bundle` | PASS |
@@ -198,4 +199,4 @@ node skills/mini-three-adapter-dev/scripts/check_project.mjs skills/mini-three-a
 ## 相关项目
 
 - 适配层源码与文档：<https://github.com/hmtx1024/mini-three-adapter>
-- 当前目标版本：`mini-three-adapter@0.1.9`
+- 当前目标版本：`mini-three-adapter@0.1.11`

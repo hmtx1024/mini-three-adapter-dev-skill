@@ -18,7 +18,7 @@ node <SKILL_DIR>/scripts/check_bundle.mjs ./dist
 
 ## 2. 把适配层接入已有小游戏项目
 
-1. 依赖：`npm i mini-three-adapter@0.1.9 three@<精确版本>`、`npm i -D vite @types/three`（three ≥ 0.163，脚手架用 0.187.0）。0.1.9 修复了真机图片事件两层 P0、能力探测、`new`/简写改写与 H5 原生事件；低于 0.1.9 先按 §14（从 0.1.7）或 §13（从 0.1.1）升级。
+1. 依赖：`npm i mini-three-adapter@0.1.11 three@<精确版本>`、`npm i -D vite @types/three`（three ≥ 0.163，脚手架用 0.187.0）。0.1.11 包含真机图片事件两层修复、对象 URL → `data:` URI、可选 `createImage` 取图入口；低于 0.1.11 先按 §15（从 0.1.9）→ §14（从 0.1.7）→ §13（从 0.1.1）补齐。
 2. `vite.config.ts` 加 `miniThree({ outputDir, brotli, roots, webgpu:'warn' })`（**扁平选项**；上游 README / `docs/07` 的 `assets: {}` 是无效写法），`build.target:'es2019'`，`rollupOptions.input: 'src/main.ts'`，`output.format:'cjs'` + `entryFileNames:'game.js'` + `chunkFileNames:'chunks/[name]-[hash].js'` + `manualChunks`（adapter / three / 共享目录）。**不要用 `inlineDynamicImports`**，也不要用 `build.lib.formats:['es']`（上游 `docs/07` 示例仍是这样，小游戏产物必须是 CJS），见 `04-pitfalls.md` A11/C11。
 3. **改造入口**（最关键）：把 `main.ts` 里所有静态 three / 场景 import 删掉，改成：
 
@@ -45,7 +45,7 @@ node <SKILL_DIR>/scripts/check_bundle.mjs ./dist
 4. 若 decoder 用了 Worker：先 `await wx.preDownloadSubpackage({ packageType:'workers' })`，且**同时只跑一个 decoder 管线**（并发上限 1）。
 5. 远程模型放 CDN + 合法域名；包内模型用 `wx.getFileSystemManager().readFile()` 转 ArrayBuffer 再 `loader.parse()`。
 6. 加载后把 GLTF 里所有 geometry/material/texture 登记进 `DisposalGroup`。
-7. 纹理走 `TextureLoader` 时注意 2 秒 watchdog：包内 PNG/JPEG 正常；网络大图先 `wx.downloadFile` 到本地路径或预加载，否则会被判 `image-events-timeout`。真机 `src` 为数据属性的宿主读不了 `mini-three-blob:` 对象 URL，GLTF 内嵌贴图先转 `data:` 或落盘。
+7. 纹理走 `TextureLoader` 时注意 2 秒 watchdog：包内 PNG/JPEG 正常；网络大图先 `wx.downloadFile` 到本地路径或预加载，否则会被判 `image-events-timeout`。0.1.10 起对象 URL 本身就是 `data:` URI，GLTF 内嵌贴图可直接加载。
 
 验收：真机能出模型；切换模型 20 次内存不持续增长；`missingAssets` 为空；没有图片事件超时告警。
 
@@ -183,8 +183,12 @@ runtime.on('contextlost', () => { /* 标记需重建；onShow 时重建 RenderTa
 | 0.1.7 | Browser `nativeEventTarget`（真实 DOM 事件不再被吞）；Vite 6 `transform` 类型修复 |
 | 0.1.8 | 真机「事件触发时读 `image.onload`」不再被 shim getter 遮蔽（ADR-0011）；超时补 `image-events-timeout` `warnOnce` |
 | 0.1.9 | `src` 为数据属性的真机宿主完全直通 + 有界轮询兜底；`addEventListener` 与回调槽位并行接线；对象 URL 告警（ADR-0012） |
+| 0.1.10 | `URL.createObjectURL` 同步返回 `data:` URI（无注册表，`revokeObjectURL` no-op，`resolveObjectURL` 恒 null）；移除 `image-src-object-url`；真机图片桥接复测通过（ADR-0013） |
+| 0.1.11 | 新增可选 `createImage?: () => WxImage`（runtime / 小程序 options / `createImageFactory` 第三参），只替换原始取图；默认路径不变 |
 
-## 14. 升级 mini-three-adapter（0.1.7 → 0.1.9，真机图片事件）
+## 14. 升级 mini-three-adapter（0.1.7 → 0.1.9，历史）
+
+> 本节描述升级到 **0.1.9** 当时的行为。0.1.10/0.1.11 又改了对象 URL 并新增 `createImage`；从 0.1.7 直接升最新时，先按本节做真机纹理回归，再叠加 §15。本节第 4/5 步里的 `image-src-object-url` 与文件桥待办仅适用于 0.1.9，0.1.10 起已不存在。
 
 0.1.8 / 0.1.9 只改 `src/core/image.ts` 与文档，**公开 API、插件选项与构建形态都没变**；但真机纹理加载行为有本质差异：0.1.7 的产物在真机上可能所有纹理空白，模拟器却完全正常。
 
@@ -195,3 +199,15 @@ runtime.on('contextlost', () => { /* 标记需重建；onShow 时重建 RenderTa
 5. GLTF 内嵌贴图（`mini-three-blob:` 对象 URL）在 `src` 为数据属性的真机宿主上仍不可用：先转 `data:` URI，或落盘到 `wx.env.USER_DATA_PATH` 再赋路径。上游文件桥尚未实现，遇到 `image-src-object-url` 不要误判为 0.1.9 回归。
 6. 用 `warnOnce` 的宿主形状排查：`hostShape.src` 为 `data` 是「数据属性直通」宿主（真机常见），`accessor` 是模拟器 / H5 形态；`onload` / `onerror` 的槽位形态同理。
 7. 重跑 `check_project.mjs` / `typecheck` / `build` / `smoke` / `h5:build` / `check_bundle.mjs`；把适配层版本与真机结论写进 `docs/compat.md`。
+
+## 15. 升级 mini-three-adapter（0.1.9 → 0.1.11，对象 URL 与取图入口）
+
+0.1.10 / 0.1.11 同样**没有改构建插件或产物形态**；变化集中在 `URL.createObjectURL` 的返回值和可选取图入口。
+
+1. `npm i -E mini-three-adapter@0.1.11`，删除 `node_modules/.vite` 后重建；确认 `package.json` 是精确版本 `0.1.11`，不是 `^0.1.11`。
+2. **对象 URL 按 `data:` 处理**：0.1.10 起 `URL.createObjectURL(blob)` 同步返回 `data:<mime>;base64,...`，不再产生 `mini-three-blob:` 句柄。删除业务里对 `mini-three-blob:` 的前缀判断、手工 `resolveObjectURL` 改写、以及「对象 URL 可 `fetch`」的假设；`revokeObjectURL()` 现在是 no-op，调用不会报错但也不会释放。
+3. **大 Blob 要留意内存**：`data:` 在 `createObjectURL` 当刻同步 base64 编码。GLTF 内嵌贴图现在在 `src` 为数据属性的真机宿主上可直接加载；但超大内嵌纹理仍建议外部化，避免瞬时大字符串。
+4. **取图差异走 `createImage`**：仅当宿主获取原始 image 的方式与 `wx.createImage()` 不同时，才传 `createImage: () => hostImage`（小游戏 / 小程序 options，或 `createImageFactory` 第三参）。它只替换原始取图，事件桥接、`src` 分流、兜底仍由适配层就地补丁；返回值必须是宿主自己的 image，禁止包装 / 克隆 / Proxy，抛错不会被吞。
+5. **移除过时期望**：0.1.10 起不再有 `image-src-object-url` 告警。若旧代码/监控按这个告警名报警，删除该规则。watchdog 的 `src` 对超长 `data:` URI 会截断为 `data:image/png;base64,…(N chars)`。
+6. 真机回归：包内 PNG/JPEG、GLTF 内嵌贴图、启动页插图都能出图；console 没有 `image-events-timeout` / `image-events-unavailable`。走 `createImage` 的项目额外确认取图返回值未被包装。
+7. 重跑 `check_project.mjs` / `typecheck` / `build` / `smoke` / `h5:build` / `check_bundle.mjs`，把版本与真机结论写入 `docs/compat.md`。
